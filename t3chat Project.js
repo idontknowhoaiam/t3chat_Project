@@ -6,49 +6,10 @@
 // @author       idontknowhoaiam
 // @match        https://t3.chat/*
 // @match        https://t3.chat/chat*
-// @match        https://beta.t3.chat/*
-// @match        https://beta.t3.chat/chat/*
 // @grant        none
 // @run-at       document-idle
 // @noframes
 // ==/UserScript==
-
-// Add debug information and browser detection
-(function() {
-    'use strict';
-
-    // Immediately output debug information
-    console.log('🚀 [T3 Chat Script] Script loading started...');
-    console.log('🌐 [T3 Chat Script] Current URL:', window.location.href);
-    console.log('🔍 [T3 Chat Script] User Agent:', navigator.userAgent);
-
-    // Detect browser type
-    const isArc = navigator.userAgent.includes('Arc') || window.chrome?.app?.isInstalled === false;
-    const isChrome = !isArc && /Chrome/.test(navigator.userAgent);
-    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-
-    console.log('🔧 [T3 Chat Script] Browser detection:', {
-        isArc: isArc,
-        isChrome: isChrome,
-        isSafari: isSafari,
-        hasChrome: !!window.chrome,
-        hasTampermonkey: !!window.Tampermonkey
-    });
-
-    // Check Tampermonkey status
-    if (typeof GM_info !== 'undefined') {
-        console.log('✅ [T3 Chat Script] Tampermonkey detected successfully:', GM_info);
-    } else {
-        console.log('⚠️ [T3 Chat Script] Tampermonkey GM_info not detected');
-    }
-
-    // Arc specific initialization delay
-    if (isArc) {
-        console.log('🎯 [T3 Chat Script] Arc browser detected, applying special handling...');
-        // Arc might need a longer initialization time
-        window.ARC_BROWSER_DETECTED = true;
-    }
-})();
 
 // --- Start of Polyfill for browser/chrome.runtime ---
 (function() {
@@ -166,27 +127,27 @@
 })();
 // --- End of Polyfill ---
 
-// Global variables and functions, ensure they are accessible externally
+// Global variables and functions, ensure accessible from outside
 window.STORAGE_KEY = 't3chat_projects';
 
-// Flag to prevent re-execution
+// Prevent duplicate execution flags
 window.T3_CHAT_INITIALIZED = false;
 window.T3_CHAT_INITIALIZING = false;
 
-// Ensure these functions are available in the global scope
+// Ensure these functions are available in global scope
 window.generateUniqueId = function() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 };
 
-// These functions will be initialized inside the IIFE
+// These functions will be initialized inside IIFE
 window.createProjectItem = null;
 window.loadProjectsFromStorage = null;
 window.saveProjectsToStorage = null;
-window.makeProjectContainersDroppable = null; // Keep declaration, IIFE will assign value
+window.makeProjectContainersDroppable = null; // Keep declaration, will be assigned inside IIFE
 window.updateProjectUI = null;
 window.toggleProjectContent = null; // Added this as it's globally assigned in setupGlobalFunctions
 
-// Add global functions related to the All button
+// Add All button related global functions
 window.getCurrentProjectId = function() {
     const currentUrl = window.location.pathname;
     const projects = window.loadProjectsFromStorage ? window.loadProjectsFromStorage() : [];
@@ -205,21 +166,15 @@ window.getCurrentProjectId = function() {
 };
 
 window.createAllButton = function() {
-    try {
-        console.log('🔘 [All Button] Starting to create All button...');
-
-        // Check if in a Project chat
-        const projectId = window.getCurrentProjectId();
+    // Check if in Project conversation
+    const projectId = window.getCurrentProjectId();
 
         // Find existing All button
         const existingButton = document.querySelector('#all-mode-toggle');
 
         if (!projectId) {
-            console.log('🔘 [All Button] Not in a Project chat');
-
-            // If not in a Project chat, remove the existing All button
+            // If not in Project conversation, remove existing All button
             if (existingButton) {
-                console.log('🔘 [All Button] Removing existing All button');
                 existingButton.remove();
 
                 // Clear related state
@@ -233,14 +188,12 @@ window.createAllButton = function() {
 
         // Check if All button already exists - stricter check
         if (existingButton) {
-            // Check if the button belongs to the current project
+            // Check if button belongs to current project
             const buttonProjectId = existingButton.getAttribute('data-project-id');
             if (buttonProjectId === projectId) {
-                console.log('🔘 [All Button] Button for the same Project already exists');
-                return true; // Button for the same project already exists
+                return true; // Button for same project already exists
             } else {
                 // Remove button from other project
-                console.log('🔘 [All Button] Removing button from other Project');
                 existingButton.remove();
 
                 // Clear related state
@@ -254,17 +207,13 @@ window.createAllButton = function() {
         // Find send button container
         const sendButton = document.querySelector('button[type="submit"]');
         if (!sendButton) {
-            console.log('🔘 [All Button] Send button not found');
             return false;
         }
 
         const targetContainer = sendButton.parentElement;
         if (!targetContainer) {
-            console.log('🔘 [All Button] Parent container of send button not found');
             return false;
         }
-
-        console.log('🔘 [All Button] Target container found, preparing to create button');
 
         // All button defaults to off state
         let isAllModeActive = false;
@@ -279,217 +228,142 @@ window.createAllButton = function() {
         // Function to update button style
         const updateButtonStyle = (active) => {
             if (active) {
-                // On state - pink style
+                // Active state - pink style
                 allButton.className = 'inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 disabled:cursor-not-allowed hover:text-foreground disabled:hover:bg-transparent disabled:hover:text-foreground/50 px-3 text-xs -mb-1.5 h-auto gap-2 rounded-full border border-solid border-secondary-foreground/10 py-1.5 pl-2 pr-2.5 text-muted-foreground hover:bg-pink-500/2 bg-pink-500/15';
                 allButton.innerHTML = 'All';
             } else {
-                // Off state - original style
+                // Inactive state - original style
                 allButton.className = 'inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 disabled:cursor-not-allowed hover:bg-muted/40 hover:text-foreground disabled:hover:bg-transparent disabled:hover:text-foreground/50 px-3 text-xs -mb-1.5 h-auto gap-2 rounded-full border border-solid border-secondary-foreground/10 py-1.5 pl-2 pr-2.5 text-muted-foreground';
                 allButton.innerHTML = 'All';
             }
         };
 
-        // Initialize button style to off state
+        // Initialize button style to inactive state
         updateButtonStyle(false);
 
         // Add click event
         allButton.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-
-            // Toggle state
+            // Toggle All mode and update button style
             isAllModeActive = !isAllModeActive;
             updateButtonStyle(isAllModeActive);
 
-            console.log(`🔘 [All Button] All mode ${isAllModeActive ? 'ON' : 'OFF'}`);
-
+            const projects = window.loadProjectsFromStorage();
+            const currentProject = projects.find(p => p.id === projectId);
             if (isAllModeActive) {
-                // All mode ON logic - collect all Project chat messages in the background
-                const projects = window.loadProjectsFromStorage();
-                const currentProject = projects.find(p => p.id === projectId);
-
+                // Enable All mode: collect silently in background
                 if (currentProject && currentProject.chats && currentProject.chats.length > 0) {
-                    console.log(`🔘 [All Button] All mode is ON, starting background collection of messages for Project "${currentProject.title}"...`);
-
-                    // Display collection progress
-                    allButton.innerHTML = 'Collecting...';
-                    allButton.disabled = true;
-
-                    // Collect and temporarily store all Project messages in the background
-                    setTimeout(() => {
-                        try {
-                            const messagesData = window.getAllProjectMessages();
-
-                            if (messagesData.success) {
-                                // Temporarily store collected messages in a global variable
-                                window.projectAllModeData = {
-                                    projectId: messagesData.projectId,
-                                    projectTitle: messagesData.projectTitle,
-                                    collectedAt: Date.now(),
-                                    totalChats: messagesData.totalChats,
-                                    availableChats: messagesData.availableChats,
-                                    chats: messagesData.chats,
-                                    allMessages: messagesData.allMessages,
-                                    totalMessages: messagesData.totalMessages,
-                                    contextPrompt: messagesData.contextPrompt,
-                                    cacheStats: messagesData.cacheStats
-                                };
-
-                                console.log(`🔘 [All Button] ✅ Full message library loaded: ${messagesData.totalMessages} messages from ${messagesData.availableChats}/${messagesData.totalChats} conversations`);
-
-                                // Set up send interceptor
-                                window.setupProjectAllModeInterceptor();
-
-                                // Restore button state
-                                allButton.innerHTML = 'All';
-                                allButton.disabled = false;
-                                updateButtonStyle(true);
-
-                            } else if (messagesData.autoCollecting) {
-                                // Auto-collecting, restore button but keep it enabled
-                                allButton.innerHTML = 'All';
-                                allButton.disabled = false;
-                                updateButtonStyle(true);
-
-                            } else {
-                                console.log('🔘 [All Button] Failed to get Project messages:', messagesData.message);
-
-                                // Collection failed, reset button state
-                                isAllModeActive = false;
-                                allButton.innerHTML = 'All';
-                                allButton.disabled = false;
-                                updateButtonStyle(false);
-                            }
-                        } catch (error) {
-                            console.error('🔘 [All Button] Error collecting messages:', error);
-
-                            // Collection error, reset button state
-                            isAllModeActive = false;
-                            allButton.innerHTML = 'All';
-                            allButton.disabled = false;
-                            updateButtonStyle(false);
+                    setTimeout(async () => {
+                        const messagesData = await window.getAllProjectMessages();
+                        if (messagesData.success) {
+                            window.projectAllModeData = {
+                                projectId: messagesData.projectId,
+                                projectTitle: messagesData.projectTitle,
+                                collectedAt: Date.now(),
+                                totalChats: messagesData.totalChats,
+                                availableChats: messagesData.availableChats,
+                                chats: messagesData.chats,
+                                allMessages: messagesData.allMessages,
+                                totalMessages: messagesData.totalMessages,
+                                contextPrompt: messagesData.contextPrompt,
+                                cacheStats: messagesData.cacheStats
+                            };
+                            window.setupProjectAllModeInterceptor();
                         }
                     }, 300);
                 }
             } else {
-                console.log('🔘 [All Button] All mode is OFF, clearing temporary data...');
-
-                // Clear temporary message data
+                // Disable All mode: clear data and interceptor
                 window.projectAllModeData = null;
-
-                // Remove send interceptor
                 if (window.removeProjectAllModeInterceptor) {
                     window.removeProjectAllModeInterceptor();
                 }
             }
         });
 
-        // Insert All button before send button (to the left)
+        // Insert All button before send button (left side)
         targetContainer.insertBefore(allButton, sendButton);
 
-        console.log('🔘 [All Button] ✅ All button created successfully, positioned to the left of the send button');
         return true;
-
-    } catch (error) {
-        console.error('🔘 [All Button] ❌ Error creating All button:', error);
-        return false;
-    }
 };
 
 // Add addChatToProject to global scope
 window.addChatToProject = null;
 
-// Send interceptor - combines Project messages with user input
+// Send interceptor - combine Project messages with user input
 window.projectAllModeInterceptorActive = false;
 
-// Set up send interceptor
+// Setup send interceptor
 window.setupProjectAllModeInterceptor = function() {
     if (window.projectAllModeInterceptorActive) {
-        console.log('🔄 [Send Interceptor] Interceptor already active');
         return;
     }
 
-    console.log('🔄 [Send Interceptor] Setting up send interceptor...');
     window.projectAllModeInterceptorActive = true;
 
     // Intercept fetch requests (most modern chat apps use fetch)
     const originalFetch = window.fetch;
 
     window.fetch = async function(url, options = {}) {
-        try {
-            // Check if it's a chat send request
-            const isChatRequest = url.includes('/chat') || url.includes('/api') ||
-                                (options.method === 'POST' && options.body);
+        // Check if this is a chat send request
+        const isChatRequest = url.includes('/chat') || url.includes('/api') ||
+                            (options.method === 'POST' && options.body);
 
-            if (isChatRequest && window.projectAllModeData && options.body) {
-                console.log('🔄 [Send Interceptor] Intercepted chat send request');
+        if (isChatRequest && window.projectAllModeData &&
+            typeof window.getCurrentProjectId === 'function' &&
+            window.getCurrentProjectId() === window.projectAllModeData.projectId &&
+            options.body) {
+            let requestData;
+            let originalMessage = '';
 
-                let requestData;
-                let originalMessage = '';
-
-                // Parse request data
-                if (typeof options.body === 'string') {
-                    try {
-                        requestData = JSON.parse(options.body);
-                        if (requestData.message) {
-                            originalMessage = requestData.message;
-                        } else if (requestData.messages && requestData.messages.length > 0) {
-                            const lastMessage = requestData.messages[requestData.messages.length - 1];
-                            originalMessage = lastMessage.content || lastMessage.message || '';
-                        }
-                    } catch (e) {
-                        // If not JSON, might be plain text
-                        originalMessage = options.body;
-                    }
-                } else if (options.body instanceof FormData) {
-                    // Handle FormData
-                    originalMessage = options.body.get('message') || options.body.get('content') || '';
+            // Parse request data
+            if (typeof options.body === 'string') {
+                requestData = JSON.parse(options.body);
+                if (requestData.message) {
+                    originalMessage = requestData.message;
+                } else if (requestData.messages && requestData.messages.length > 0) {
+                    const lastMessage = requestData.messages[requestData.messages.length - 1];
+                    originalMessage = lastMessage.content || lastMessage.message || '';
                 }
-
-                if (originalMessage && originalMessage.trim()) {
-                    console.log(`🔄 [Send Interceptor] Original message: ${originalMessage.substring(0, 100)}...`);
-
-                    // Combine Project context and user message
-                    const combinedMessage = window.projectAllModeData.contextPrompt +
-                                          `\nUser Question: ${originalMessage}` +
-                                          `\n\nPlease answer my question based on the conversations in the Project "${window.projectAllModeData.projectTitle}" above.`;
-
-                    // Modify request data
-                    if (requestData) {
-                        if (requestData.message) {
-                            requestData.message = combinedMessage;
-                        } else if (requestData.messages && requestData.messages.length > 0) {
-                            const lastMessage = requestData.messages[requestData.messages.length - 1];
-                            if (lastMessage.content) {
-                                lastMessage.content = combinedMessage;
-                            } else if (lastMessage.message) {
-                                lastMessage.message = combinedMessage;
-                            }
-                        }
-                        options.body = JSON.stringify(requestData);
-                    } else if (options.body instanceof FormData) {
-                        options.body.set('message', combinedMessage);
-                    } else if (typeof options.body === 'string') {
-                        options.body = combinedMessage;
-                    }
-
-                    console.log(`🔄 [Send Interceptor] ✅ Project context combined with user message and sent`);
-                }
+            } else if (options.body instanceof FormData) {
+                // Handle FormData
+                originalMessage = options.body.get('message') || options.body.get('content') || '';
             }
 
-            // Continue original request
-            return originalFetch.call(this, url, options);
+            if (originalMessage && originalMessage.trim()) {
+                // Combine Project context and user message
+                const combinedMessage = window.projectAllModeData.contextPrompt +
+                                      `\nUser Question: ${originalMessage}` +
+                                      `\n\nPlease answer my question based on the conversations in the above Project "${window.projectAllModeData.projectTitle}".`;
 
-        } catch (error) {
-            console.error('🔄 [Send Interceptor] Interceptor processing error:', error);
-            return originalFetch.call(this, url, options);
+                // Modify request data
+                if (requestData) {
+                    if (requestData.message) {
+                        requestData.message = combinedMessage;
+                    } else if (requestData.messages && requestData.messages.length > 0) {
+                        const lastMessage = requestData.messages[requestData.messages.length - 1];
+                        if (lastMessage.content) {
+                            lastMessage.content = combinedMessage;
+                        } else if (lastMessage.message) {
+                            lastMessage.message = combinedMessage;
+                        }
+                    }
+                    options.body = JSON.stringify(requestData);
+                } else if (options.body instanceof FormData) {
+                    options.body.set('message', combinedMessage);
+                } else if (typeof options.body === 'string') {
+                    options.body = combinedMessage;
+                }
+            }
         }
+
+        // Continue original request
+        return originalFetch.call(this, url, options);
     };
 
     // Save original fetch for restoration
     window.originalFetch = originalFetch;
-
-    console.log('🔄 [Send Interceptor] ✅ Fetch interceptor setup complete');
 };
 
 // Remove send interceptor
@@ -498,36 +372,25 @@ window.removeProjectAllModeInterceptor = function() {
         return;
     }
 
-    console.log('🔄 [Send Interceptor] Removing interceptor...');
-
     // Restore original fetch function
     if (window.originalFetch) {
         window.fetch = window.originalFetch;
         delete window.originalFetch;
-        console.log('🔄 [Send Interceptor] Original fetch function restored');
     }
 
     // Reset state
     window.projectAllModeInterceptorActive = false;
-
-    console.log('🔄 [Send Interceptor] ✅ Interceptor removed');
 };
 
 (function() {
     'use strict';
-    const SCRIPT_PREFIX = '[TM Button Width Adjust v0.4.1]'; // Updated version number
     const STORAGE_KEY = window.STORAGE_KEY; // Use the global STORAGE_KEY
 
     // Prevent selection-related errors
     Object.defineProperty(window, 'getPosition', {
         value: function() {
-            try {
-                // Backup of original getPosition function or empty implementation
-                return { start: 0, end: 0 };
-            } catch (e) {
-                console.error(`${SCRIPT_PREFIX} getPosition error intercepted:`, e);
-                return { start: 0, end: 0 };
-            }
+            // Backup of original getPosition function or empty implementation
+            return { start: 0, end: 0 };
         },
         writable: true,
         configurable: true
@@ -535,57 +398,36 @@ window.removeProjectAllModeInterceptor = function() {
 
     // Intercept possible selectionStart errors
     const originalElementPrototypeGetters = {};
-    ['selectionStart', 'selectionEnd'].forEach(prop => {
-        const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, prop);
-        if (descriptor && descriptor.get) {
-            originalElementPrototypeGetters[prop] = descriptor.get;
+            ['selectionStart', 'selectionEnd'].forEach(prop => {
+            const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, prop);
+            if (descriptor && descriptor.get) {
+                originalElementPrototypeGetters[prop] = descriptor.get;
 
-            Object.defineProperty(HTMLInputElement.prototype, prop, {
-                get: function() {
-                    try {
+                Object.defineProperty(HTMLInputElement.prototype, prop, {
+                    get: function() {
                         if (!this || this === null) return 0;
                         return originalElementPrototypeGetters[prop].call(this);
-                    } catch (e) {
-                        console.error(`${SCRIPT_PREFIX} Safe ${prop} access error intercepted:`, e);
-                        return 0;
-                    }
-                },
+                    },
                 configurable: true
             });
         }
     });
 
-    // Add global error handling for Promises to prevent unhandled errors from appearing in the console
-    window.addEventListener('unhandledrejection', function(event) {
-        event.preventDefault();
-        // Silently handle all unhandled Promise errors
-        // console.warn(`${SCRIPT_PREFIX} Unhandled Promise error silenced:, event.reason);
-    });
+
 
     // Load projects from local storage
     const loadProjectsFromStorage = () => {
-        try {
-            const projectsJson = localStorage.getItem(STORAGE_KEY);
-            return projectsJson ? JSON.parse(projectsJson) : [];
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Failed to load projects:`, error);
-            return [];
-        }
+        const projectsJson = localStorage.getItem(STORAGE_KEY);
+        return projectsJson ? JSON.parse(projectsJson) : [];
     };
 
     // Save projects to local storage
     const saveProjectsToStorage = (projects) => {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Failed to save projects:`, error);
-        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
     };
 
-    // Drag diagnostics and force override feature
+    // Drag diagnostics and force override functionality
     const enableDragDiagnostics = () => {
-        console.log(`${SCRIPT_PREFIX} ===== Starting Drag Diagnostics and Force Override =====`);
-
         // Remove any existing colored dots
         document.querySelectorAll('.force-drag-marker, .force-drop-marker').forEach(marker => {
             if (marker && marker.parentNode) {
@@ -594,23 +436,17 @@ window.removeProjectAllModeInterceptor = function() {
         });
 
         const allPossibleChatItems = document.querySelectorAll('a[href^="/chat/"], a[data-discover="true"], div[data-sidebar="content"] a');
-        console.log(`${SCRIPT_PREFIX} Found ${allPossibleChatItems.length} possible chat items`);
 
         const originalAddEventListener = EventTarget.prototype.addEventListener;
         EventTarget.prototype.addEventListener = function(type, listener, options) {
-            if (type === 'dragstart' || type === 'drop') {
-                // console.log(`${SCRIPT_PREFIX} Detected event listener: ${type} on, this);
-            }
             return originalAddEventListener.call(this, type, listener, options);
         };
 
         const originalPreventDefault = Event.prototype.preventDefault;
         Event.prototype.preventDefault = function() {
             if (this.type === 'dragstart' || this.type === 'drop') {
-                // console.warn(`${SCRIPT_PREFIX} [Drag Diagnostics] Detected preventDefault for: ${this.type}, this);
                 const target = this.target || this.srcElement;
                 if (target && target.getAttribute && target.getAttribute('data-manual-drag') === 'true') {
-                    // console.log(`${SCRIPT_PREFIX} [Drag Diagnostics] Allowing preventDefault for manual drag event);
                     return originalPreventDefault.call(this);
                 }
                 return;
@@ -624,11 +460,9 @@ window.removeProjectAllModeInterceptor = function() {
             if (chatItem.getAttribute('data-mac-drag-fixed') === 'true') return;
 
             chatItem.setAttribute('data-mac-drag-fixed', 'true');
-            // console.log(`${SCRIPT_PREFIX} [macOS Drag Fix] Adding drag support to element, chatItem);
             chatItem.setAttribute('draggable', 'true');
 
             if (navigator.userAgent.indexOf('Safari') !== -1 && navigator.userAgent.indexOf('Chrome') === -1) {
-                // console.log(`${SCRIPT_PREFIX} [macOS Drag Fix] Safari detected, applying special handling);
                 chatItem.addEventListener('mousedown', function(downEvent) {
                     this.setAttribute('data-safari-dragging', 'true');
                     const startDrag = () => {
@@ -649,146 +483,123 @@ window.removeProjectAllModeInterceptor = function() {
         }, true);
 
         allPossibleChatItems.forEach((item, index) => {
-            try {
-                item.style.position = item.style.position || 'relative';
-                item.style.cursor = 'grab';
-                item.style.userSelect = 'none';
-                item.removeAttribute('data-prevent-drag');
-                item.setAttribute('draggable', 'true');
-                item.setAttribute('data-force-draggable', 'true');
+            item.style.position = item.style.position || 'relative';
+            item.style.cursor = 'grab';
+            item.style.userSelect = 'none';
+            item.removeAttribute('data-prevent-drag');
+            item.setAttribute('draggable', 'true');
+            item.setAttribute('data-force-draggable', 'true');
 
-                const replaceDragHandlers = (element) => {
-                    const newDragStart = (e) => {
-                        // console.log(`${SCRIPT_PREFIX} [Drag Diagnostics] dragstart event triggered on element:, element);
-                        e.stopImmediatePropagation();
-                        const chatUrl = element.getAttribute('href');
-                        const chatTitle = element.querySelector('input')?.value || element.textContent || 'Chat';
-                        const dragData = {
-                            type: 'chat-item',
-                            url: chatUrl,
-                            title: chatTitle,
-                            sourceElement: element.outerHTML,
-                            forceDragged: true
-                        };
-                        e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
-                        e.dataTransfer.setData('application/t3chat-item', JSON.stringify(dragData));
-                        e.dataTransfer.effectAllowed = 'copy';
-                        element.style.opacity = '0.7';
-                        const dragImage = element.cloneNode(true);
-                        dragImage.style.width = `${element.offsetWidth}px`;
-                        dragImage.style.height = `${element.offsetHeight}px`;
-                        dragImage.style.background = 'rgba(255, 255, 255, 0.5)'; // More transparent background
-                        dragImage.style.borderRadius = '8px';
-                        dragImage.style.boxShadow = '0px 10px 25px rgba(0, 0, 0, 0.15)'; // Finer shadow
-                        dragImage.style.backdropFilter = 'blur(5px)'; // Add Gaussian blur
-                        dragImage.style.webkitBackdropFilter = 'blur(5px)'; // Safari support
-                        dragImage.style.opacity = '0.85'; // Overall opacity
-                        dragImage.style.transform = 'scale(0.85)';
-                        dragImage.style.transition = 'all 0.2s ease';
-
-                        // Make inner text clearer
-                        const textElements = dragImage.querySelectorAll('span, input, div');
-                        textElements.forEach(el => {
-                            if (el.textContent && el.textContent.trim().length > 0) {
-                                el.style.textShadow = '0 0 1px rgba(0,0,0,0.1)';
-                                el.style.fontWeight = '500';
-                            }
-                        });
-
-                        document.body.appendChild(dragImage);
-                        dragImage.style.position = 'absolute';
-                        dragImage.style.top = '-1000px';
-                        dragImage.style.left = '-1000px';
-                        dragImage.id = 'force-drag-ghost';
-                        e.dataTransfer.setDragImage(dragImage, 20, 20);
-                        setTimeout(() => {
-                            if (document.body.contains(dragImage)) {
-                                document.body.removeChild(dragImage);
-                            }
-                        }, 300);
-                        // console.log(`${SCRIPT_PREFIX} [Drag Diagnostics] Successfully set drag data, URL: ${chatUrl});
-                        return true;
+            const replaceDragHandlers = (element) => {
+                const newDragStart = (e) => {
+                    e.stopImmediatePropagation();
+                    const chatUrl = element.getAttribute('href');
+                    const chatTitle = element.querySelector('input')?.value || element.textContent || 'Chat';
+                    const dragData = {
+                        type: 'chat-item',
+                        url: chatUrl,
+                        title: chatTitle,
+                        sourceElement: element.outerHTML,
+                        forceDragged: true
                     };
+                    e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+                    e.dataTransfer.setData('application/t3chat-item', JSON.stringify(dragData));
+                    e.dataTransfer.effectAllowed = 'copy';
+                    element.style.opacity = '0.7';
+                    const dragImage = element.cloneNode(true);
+                    dragImage.style.width = `${element.offsetWidth}px`;
+                    dragImage.style.height = `${element.offsetHeight}px`;
+                    dragImage.style.background = 'rgba(255, 255, 255, 0.5)'; // More transparent background
+                    dragImage.style.borderRadius = '8px';
+                    dragImage.style.boxShadow = '0px 10px 25px rgba(0, 0, 0, 0.15)'; // More detailed shadow
+                    dragImage.style.backdropFilter = 'blur(5px)'; // Add Gaussian blur
+                    dragImage.style.webkitBackdropFilter = 'blur(5px)'; // Safari support
+                    dragImage.style.opacity = '0.85'; // Overall transparency
+                    dragImage.style.transform = 'scale(0.85)';
+                    dragImage.style.transition = 'all 0.2s ease';
 
-                    const oldListeners = getEventListeners(element); // Note: getEventListeners only works in developer tools
-                    if (oldListeners && oldListeners.dragstart) {
-                        oldListeners.dragstart.forEach(listener => {
-                            element.removeEventListener('dragstart', listener.listener);
-                            // console.log(`${SCRIPT_PREFIX} [Drag Diagnostics] Removed original dragstart listener);
-                        });
-                    }
-                    element.addEventListener('dragstart', newDragStart, true);
-                    element.addEventListener('dragend', (e) => {
-                        element.style.opacity = '';
-                        // console.log(`${SCRIPT_PREFIX} [Drag Diagnostics] Drag end);
-                    }, true);
+                    // Make inner text clearer
+                    const textElements = dragImage.querySelectorAll('span, input, div');
+                    textElements.forEach(el => {
+                        if (el.textContent && el.textContent.trim().length > 0) {
+                            el.style.textShadow = '0 0 1px rgba(0,0,0,0.1)';
+                            el.style.fontWeight = '500';
+                        }
+                    });
+
+                    document.body.appendChild(dragImage);
+                    dragImage.style.position = 'absolute';
+                    dragImage.style.top = '-1000px';
+                    dragImage.style.left = '-1000px';
+                    dragImage.id = 'force-drag-ghost';
+                    e.dataTransfer.setDragImage(dragImage, 20, 20);
+                    setTimeout(() => {
+                        if (document.body.contains(dragImage)) {
+                            document.body.removeChild(dragImage);
+                        }
+                    }, 300);
+                    return true;
                 };
-                replaceDragHandlers(item);
-            } catch (error) {
-                console.error(`${SCRIPT_PREFIX} [Drag Diagnostics] Error processing element #${index}:`, error);
-            }
+
+                const oldListeners = getEventListeners(element); // Note: getEventListeners only works in developer tools
+                if (oldListeners && oldListeners.dragstart) {
+                    oldListeners.dragstart.forEach(listener => {
+                        element.removeEventListener('dragstart', listener.listener);
+                    });
+                }
+                element.addEventListener('dragstart', newDragStart, true);
+                element.addEventListener('dragend', (e) => {
+                    element.style.opacity = '';
+                }, true);
+            };
+            replaceDragHandlers(item);
         });
 
         const projectContainers = document.querySelectorAll('a[data-project-id]');
         projectContainers.forEach((container, index) => {
-            try {
-                const oldListeners = getEventListeners(container); // Note: getEventListeners only works in developer tools
-                ['dragover', 'dragenter', 'dragleave', 'drop'].forEach(eventType => {
-                    if (oldListeners && oldListeners[eventType]) {
-                        oldListeners[eventType].forEach(listener => {
-                            container.removeEventListener(eventType, listener.listener);
-                        });
-                    }
-                });
+            const oldListeners = getEventListeners(container); // Note: getEventListeners only works in developer tools
+            ['dragover', 'dragenter', 'dragleave', 'drop'].forEach(eventType => {
+                if (oldListeners && oldListeners[eventType]) {
+                    oldListeners[eventType].forEach(listener => {
+                        container.removeEventListener(eventType, listener.listener);
+                    });
+                }
+            });
 
-                container.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'copy';
-                    container.style.background = 'rgba(59, 130, 246, 0.15)';
-                    container.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.5)';
-                }, true);
-                container.addEventListener('dragenter', (e) => {
-                    e.preventDefault();
-                    // console.log(`${SCRIPT_PREFIX} [Drag Diagnostics] Drag entered project container:, container);
-                }, true);
-                container.addEventListener('dragleave', (e) => {
-                    container.style.background = '';
-                    container.style.boxShadow = '';
-                }, true);
-                container.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    container.style.background = '';
-                    container.style.boxShadow = '';
-                    // console.log(`${SCRIPT_PREFIX} [Drag Diagnostics] Dropped on project container:, container);
-                    try {
-                        const dataString = e.dataTransfer.getData('application/t3chat-item') || e.dataTransfer.getData('text/plain');
-                        if (!dataString) {
-                            console.error(`${SCRIPT_PREFIX} [Drag Diagnostics] Could not get drag data`);
-                            return;
-                        }
-                        const dragData = JSON.parse(dataString);
-                        // console.log(`${SCRIPT_PREFIX} [Drag Diagnostics] Successfully parsed drag data:, dragData);
-                        if (dragData.type === 'chat-item') {
-                            const projectId = container.getAttribute('data-project-id');
-                            if (projectId) {
-                                // console.log(`${SCRIPT_PREFIX} [Drag Diagnostics] Adding chat "${dragData.title}" to project ${projectId});
-                                addChatToProject(dragData, projectId); // Ensure addChatToProject is defined
-                                toggleProjectContent(projectId); // Ensure content is displayed
-                                // console.log(`${SCRIPT_PREFIX} [Drag Diagnostics] Added successfully);
-                            }
-                        }
-                    } catch (error) {
-                        console.error(`${SCRIPT_PREFIX} [Drag Diagnostics] Error processing drop data:`, error);
+            container.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+                container.style.background = 'rgba(59, 130, 246, 0.15)';
+                container.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.5)';
+            }, true);
+            container.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+            }, true);
+            container.addEventListener('dragleave', (e) => {
+                container.style.background = '';
+                container.style.boxShadow = '';
+            }, true);
+            container.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                container.style.background = '';
+                container.style.boxShadow = '';
+                const dataString = e.dataTransfer.getData('application/t3chat-item') || e.dataTransfer.getData('text/plain');
+                if (!dataString) {
+                    return;
+                }
+                const dragData = JSON.parse(dataString);
+                if (dragData.type === 'chat-item') {
+                    const projectId = container.getAttribute('data-project-id');
+                    if (projectId) {
+                        addChatToProject(dragData, projectId); // Ensure addChatToProject is defined
+                        toggleProjectContent(projectId); // Ensure content is displayed
                     }
-                }, true);
+                }
+            }, true);
 
-                container.setAttribute('data-force-droppable', 'true');
-            } catch (error) {
-                console.error(`${SCRIPT_PREFIX} [Drag Diagnostics] Error processing project container #${index}:`, error);
-            }
+            container.setAttribute('data-force-droppable', 'true');
         });
-        console.log(`${SCRIPT_PREFIX} ===== Drag Diagnostics and Force Override Complete =====`);
     };
 
     const getEventListeners = (element) => {
@@ -797,120 +608,95 @@ window.removeProjectAllModeInterceptor = function() {
     };
 
     const setupDragAndDrop = () => {
-        try {
-            console.log(`${SCRIPT_PREFIX} Starting to set up drag and drop functionality...`);
+        // Add CSS styles to prevent accidental text selection
+        if (!document.querySelector('#project-text-selection-style')) {
+            const style = document.createElement('style');
+            style.id = 'project-text-selection-style';
+            style.textContent = `
+                a[data-project-id] {
+                    -webkit-user-select: none !important;
+                    -moz-user-select: none !important;
+                    -ms-user-select: none !important;
+                    user-select: none !important;
+                }
 
-            // Add CSS styles to prevent accidental text selection
-            if (!document.querySelector('#project-text-selection-style')) {
-                const style = document.createElement('style');
-                style.id = 'project-text-selection-style';
-                style.textContent = `
-                    a[data-project-id] {
-                        -webkit-user-select: none !important;
-                        -moz-user-select: none !important;
-                        -ms-user-select: none !important;
-                        user-select: none !important;
-                    }
+                a[data-project-id] input[readonly] {
+                    -webkit-user-select: none !important;
+                    -moz-user-select: none !important;
+                    -ms-user-select: none !important;
+                    user-select: none !important;
+                }
 
-                    a[data-project-id] input[readonly] {
-                        -webkit-user-select: none !important;
-                        -moz-user-select: none !important;
-                        -ms-user-select: none !important;
-                        user-select: none !important;
-                    }
-
-                    .triangle-icon {
-                        -webkit-user-select: none !important;
-                        -moz-user-select: none !important;
-                        -ms-user-select: none !important;
-                        user-select: none !important;
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-
-            makeChatsItemsDraggable();
-            makeProjectContainersDroppable(); // Will now call the function defined inside the IIFE
-            observeDOMForDragAndDrop();
-            setupGlobalDragEffects();
-            setTimeout(enableDragDiagnostics, 2000);
-            console.log(`${SCRIPT_PREFIX} Drag and drop functionality setup complete`);
-            setTimeout(() => {
-                makeChatsItemsDraggable();
-                makeProjectContainersDroppable();
-                enableDragDiagnostics();
-            }, 3000);
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Error setting up drag and drop functionality:`, error);
+                .triangle-icon {
+                    -webkit-user-select: none !important;
+                    -moz-user-select: none !important;
+                    -ms-user-select: none !important;
+                    user-select: none !important;
+                }
+            `;
+            document.head.appendChild(style);
         }
+
+        makeChatsItemsDraggable();
+        makeProjectContainersDroppable(); // Now calls the function defined inside IIFE
+        observeDOMForDragAndDrop();
+        setupGlobalDragEffects();
     };
 
-    // Set up global drag effects, highlight all Project containers during drag
+    // Setup global drag effects, highlight all Project containers during drag
     const setupGlobalDragEffects = () => {
-        try {
-            // Remove Gaussian blur feature, only keep container highlighting
+        // Remove Gaussian blur functionality, keep only container highlighting
 
-            // Listen for global drag events
-            document.addEventListener('dragstart', handleGlobalDragStart, true);
-            document.addEventListener('dragend', handleGlobalDragEnd, true);
-            document.addEventListener('drop', handleGlobalDragEnd, true);
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Error setting up global drag effects:`, error);
-        }
+        // Listen to global drag events
+        document.addEventListener('dragstart', handleGlobalDragStart, true);
+        document.addEventListener('dragend', handleGlobalDragEnd, true);
+        document.addEventListener('drop', handleGlobalDragEnd, true);
     };
 
     // Handle global drag start event
     const handleGlobalDragStart = (e) => {
-        try {
-            const chatItem = e.target.closest('a[href^="/chat/"]');
-            if (!chatItem) return;
+        const chatItem = e.target.closest('a[href^="/chat/"]');
+        if (!chatItem) return;
 
-            // Highlight all Project containers
-            const projectContainers = document.querySelectorAll('a[data-project-id]');
-            projectContainers.forEach(container => {
-                // Add highlight effect to make it more noticeable
-                container.style.transition = 'all 0.2s ease-in-out';
-                container.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.6), 0 4px 12px rgba(59, 130, 246, 0.3)';
-                container.style.background = 'rgba(59, 130, 246, 0.15)';
-                container.style.zIndex = '1000';
-                container.style.position = 'relative';
+        // Highlight all Project containers
+        const projectContainers = document.querySelectorAll('a[data-project-id]');
+        projectContainers.forEach(container => {
+            // Add highlight effect to make it more obvious
+            container.style.transition = 'all 0.2s ease-in-out';
+            container.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.6), 0 4px 12px rgba(59, 130, 246, 0.3)';
+            container.style.background = 'rgba(59, 130, 246, 0.15)';
+            container.style.zIndex = '1000';
+            container.style.position = 'relative';
 
-                // Add slight zoom effect to Project containers to make them easier to click
-                container.style.transform = 'scale(1.03)';
+            // Add slight scaling effect to Project containers to make them easier to click
+            container.style.transform = 'scale(1.03)';
 
-                // Highlight Project icon
-                const folderIcon = container.querySelector('svg.lucide-folder');
-                if (folderIcon) {
-                    folderIcon.style.color = '#3b82f6';
-                    folderIcon.style.transition = 'all 0.2s ease-in-out';
-                    folderIcon.style.transform = 'scale(1.2)';
-                }
-            });
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Error handling global drag start event:`, error);
-        }
+            // Highlight Project icon
+            const folderIcon = container.querySelector('svg.lucide-folder');
+            if (folderIcon) {
+                folderIcon.style.color = '#3b82f6';
+                folderIcon.style.transition = 'all 0.2s ease-in-out';
+                folderIcon.style.transform = 'scale(1.2)';
+            }
+        });
     };
 
     // Handle global drag end event
     const handleGlobalDragEnd = (e) => {
-        try {
-            // Reset styles for all Project containers
-            const projectContainers = document.querySelectorAll('a[data-project-id]');
-            projectContainers.forEach(container => {
-                container.style.boxShadow = '';
-                container.style.background = '';
-                container.style.transform = '';
+        // Reset all Project container styles
+        const projectContainers = document.querySelectorAll('a[data-project-id]');
+        projectContainers.forEach(container => {
+            container.style.boxShadow = '';
+            container.style.background = '';
+            container.style.transform = '';
 
-                // Reset Project icon
-                const folderIcon = container.querySelector('svg.lucide-folder');
-                if (folderIcon) {
-                    folderIcon.style.color = '';
-                    folderIcon.style.transform = '';
-                }
-            });
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Error handling global drag end event:`, error);
-        }
+            // Reset Project icon
+            const folderIcon = container.querySelector('svg.lucide-folder');
+            if (folderIcon) {
+                folderIcon.style.color = '';
+                folderIcon.style.transform = '';
+            }
+        });
     };
 
     const makeChatsItemsDraggable = () => {
@@ -933,7 +719,6 @@ window.removeProjectAllModeInterceptor = function() {
                             document.removeEventListener('mousemove', mouseMoveHandler);
                             document.removeEventListener('mouseup', mouseUpHandler);
                             if (item.getAttribute('data-drag-started') !== 'true') {
-                                // console.log(`${SCRIPT_PREFIX} [Enhanced Drag] Manually triggering drag start);
                                 const dragStartEvent = new DragEvent('dragstart', {
                                     bubbles: true,
                                     cancelable: true,
@@ -989,216 +774,176 @@ window.removeProjectAllModeInterceptor = function() {
                 });
             }
         });
-        // console.log(`${SCRIPT_PREFIX} Processed ${chatItems.length} chat items for draggable setup);
     };
 
     const handleDragStart = (event) => {
-        try {
-            // console.log(`${SCRIPT_PREFIX} Drag start, event.currentTarget);
-            event.currentTarget.setAttribute('data-drag-started', 'true');
-            const chatUrl = event.currentTarget.getAttribute('href');
-            const chatTitle = event.currentTarget.querySelector('input')?.value || 'Chat';
-            const sourceElement = event.currentTarget.outerHTML;
-            const dragData = {
-                type: 'chat-item',
-                url: chatUrl,
-                title: chatTitle,
-                sourceElement: sourceElement
-            };
-            // console.log(`${SCRIPT_PREFIX} Drag data:, JSON.stringify(dragData).substring(0, 100) + '...');
-            event.dataTransfer.setData('text/plain', JSON.stringify(dragData));
-            event.dataTransfer.setData('application/t3chat-item', JSON.stringify(dragData));
-            event.dataTransfer.effectAllowed = 'copy';
-            event.currentTarget.style.opacity = '0.7';
-            event.currentTarget.classList.add('being-dragged');
-            const dragImage = event.currentTarget.cloneNode(true);
-            dragImage.style.width = `${event.currentTarget.offsetWidth}px`;
-            dragImage.style.height = `${event.currentTarget.offsetHeight}px`;
-            dragImage.style.background = 'rgba(255, 255, 255, 0.5)'; // More transparent background
-            dragImage.style.borderRadius = '8px';
-            dragImage.style.overflow = 'hidden';
-            dragImage.style.transform = 'scale(0.85)';
-            dragImage.style.pointerEvents = 'none';
-            dragImage.style.boxShadow = '0px 10px 25px rgba(0, 0, 0, 0.15)'; // Finer shadow
-            dragImage.style.zIndex = '9999';
-            dragImage.style.backdropFilter = 'blur(5px)'; // Add Gaussian blur
-            dragImage.style.webkitBackdropFilter = 'blur(5px)'; // Safari support
-            dragImage.style.transition = 'all 0.2s ease';
-            dragImage.style.opacity = '0.85'; // Overall opacity
+        event.currentTarget.setAttribute('data-drag-started', 'true');
+        const chatUrl = event.currentTarget.getAttribute('href');
+        const chatTitle = event.currentTarget.querySelector('input')?.value || 'Chat';
+        const sourceElement = event.currentTarget.outerHTML;
+        const dragData = {
+            type: 'chat-item',
+            url: chatUrl,
+            title: chatTitle,
+            sourceElement: sourceElement
+        };
+        event.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+        event.dataTransfer.setData('application/t3chat-item', JSON.stringify(dragData));
+        event.dataTransfer.effectAllowed = 'copy';
+        event.currentTarget.style.opacity = '0.7';
+        event.currentTarget.classList.add('being-dragged');
+        const dragImage = event.currentTarget.cloneNode(true);
+        dragImage.style.width = `${event.currentTarget.offsetWidth}px`;
+        dragImage.style.height = `${event.currentTarget.offsetHeight}px`;
+                                dragImage.style.background = 'rgba(255, 255, 255, 0.5)'; // More transparent background
+        dragImage.style.borderRadius = '8px';
+        dragImage.style.overflow = 'hidden';
+        dragImage.style.transform = 'scale(0.85)';
+        dragImage.style.pointerEvents = 'none';
+        dragImage.style.boxShadow = '0px 10px 25px rgba(0, 0, 0, 0.15)'; // More detailed shadow
+        dragImage.style.zIndex = '9999';
+        dragImage.style.backdropFilter = 'blur(5px)'; // Add Gaussian blur
+        dragImage.style.webkitBackdropFilter = 'blur(5px)'; // Safari support
+        dragImage.style.transition = 'all 0.2s ease';
+        dragImage.style.opacity = '0.85'; // Overall transparency
 
-            // Make inner text clearer
-            const textElements = dragImage.querySelectorAll('span, input, div');
-            textElements.forEach(el => {
-                if (el.textContent && el.textContent.trim().length > 0) {
-                    el.style.textShadow = '0 0 1px rgba(0,0,0,0.1)';
-                    el.style.fontWeight = '500';
-                }
-            });
+        // Make inner text clearer
+        const textElements = dragImage.querySelectorAll('span, input, div');
+        textElements.forEach(el => {
+            if (el.textContent && el.textContent.trim().length > 0) {
+                el.style.textShadow = '0 0 1px rgba(0,0,0,0.1)';
+                el.style.fontWeight = '500';
+            }
+        });
 
-            document.body.appendChild(dragImage);
-            dragImage.style.position = 'absolute';
-            dragImage.style.top = '-1000px';
-            dragImage.style.left = '-1000px';
-            dragImage.id = 'drag-ghost-image';
-            event.dataTransfer.setDragImage(dragImage, 20, 20);
-            setTimeout(() => {
-                if (document.body.contains(dragImage)) {
-                    document.body.removeChild(dragImage);
-                }
-                event.currentTarget.removeAttribute('data-drag-started');
-                event.currentTarget.removeAttribute('data-manual-drag');
-            }, 300);
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Drag start error:`, error);
-        }
+        document.body.appendChild(dragImage);
+        dragImage.style.position = 'absolute';
+        dragImage.style.top = '-1000px';
+        dragImage.style.left = '-1000px';
+        dragImage.id = 'drag-ghost-image';
+        event.dataTransfer.setDragImage(dragImage, 20, 20);
+        setTimeout(() => {
+            if (document.body.contains(dragImage)) {
+                document.body.removeChild(dragImage);
+            }
+            event.currentTarget.removeAttribute('data-drag-started');
+            event.currentTarget.removeAttribute('data-manual-drag');
+        }, 300);
     };
 
     const handleDragEnd = (event) => {
-        try {
-            event.currentTarget.style.opacity = '';
-            event.currentTarget.classList.remove('being-dragged');
-            document.querySelectorAll('.drag-over').forEach(el => {
-                el.classList.remove('drag-over');
-                el.style.background = '';
-                el.style.boxShadow = '';
-            });
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Drag end error:`, error);
-        }
+        event.currentTarget.style.opacity = '';
+        event.currentTarget.classList.remove('being-dragged');
+        document.querySelectorAll('.drag-over').forEach(el => {
+            el.classList.remove('drag-over');
+            el.style.background = '';
+            el.style.boxShadow = '';
+        });
     };
 
     const handleDragOver = function(event) {
-        try {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = 'copy';
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
 
-            // Ensure the entire Project container has clear visual feedback
-            if (!this.classList.contains('drag-over')) {
-                handleDragEnter.call(this, event);
-            }
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Drag over target error:`, error);
+        // Ensure the entire Project container has obvious visual feedback
+        if (!this.classList.contains('drag-over')) {
+            handleDragEnter.call(this, event);
         }
     };
 
     const handleDragEnter = function(event) {
-        try {
-            this.classList.add('drag-over');
-            this.style.background = 'rgba(59, 130, 246, 0.2)';
-            this.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.6), 0 4px 12px rgba(59, 130, 246, 0.3)';
-            this.style.transform = 'scale(1.02)';
-            this.style.transition = 'all 0.15s ease-in-out';
+        this.classList.add('drag-over');
+        this.style.background = 'rgba(59, 130, 246, 0.2)';
+        this.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.6), 0 4px 12px rgba(59, 130, 246, 0.3)';
+        this.style.transform = 'scale(1.02)';
+        this.style.transition = 'all 0.15s ease-in-out';
 
-            // Add insertion indicator animation
-            const indicator = this.querySelector('.drag-drop-indicator');
-            if (indicator) {
-                indicator.style.display = 'block';
-                indicator.style.animation = 'pulse 1s infinite';
-                indicator.style.opacity = '1';
-            }
+        // Add insertion indicator animation
+        const indicator = this.querySelector('.drag-drop-indicator');
+        if (indicator) {
+            indicator.style.display = 'block';
+            indicator.style.animation = 'pulse 1s infinite';
+            indicator.style.opacity = '1';
+        }
 
-            // Add animation effect to icons inside the container
-            const folderIcon = this.querySelector('svg.lucide-folder');
-            if (folderIcon) {
-                folderIcon.style.transform = 'scale(1.1)';
-                folderIcon.style.transition = 'transform 0.15s ease-in-out';
-                folderIcon.style.color = '#3b82f6';
-            }
+        // Add animation effects to icons within the container
+        const folderIcon = this.querySelector('svg.lucide-folder');
+        if (folderIcon) {
+            folderIcon.style.transform = 'scale(1.1)';
+            folderIcon.style.transition = 'transform 0.15s ease-in-out';
+            folderIcon.style.color = '#3b82f6';
+        }
 
-            // Add pulse animation
-            if (!document.querySelector('#project-hover-animation')) {
-                const styleSheet = document.createElement('style');
-                styleSheet.id = 'project-hover-animation';
-                styleSheet.textContent = `
-                    @keyframes pulse {
-                        0% { opacity: 0.6; }
-                        50% { opacity: 1; }
-                        100% { opacity: 0.6; }
-                    }
-                `;
-                document.head.appendChild(styleSheet);
-            }
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Drag enter target error:`, error);
+        // Add pulsing animation
+        if (!document.querySelector('#project-hover-animation')) {
+            const styleSheet = document.createElement('style');
+            styleSheet.id = 'project-hover-animation';
+            styleSheet.textContent = `
+                @keyframes pulse {
+                    0% { opacity: 0.6; }
+                    50% { opacity: 1; }
+                    100% { opacity: 0.6; }
+                }
+            `;
+            document.head.appendChild(styleSheet);
         }
     };
 
     const handleDragLeave = function(event) {
-        try {
-            // Check if really left the entire element area, not just entered a child element
-            const rect = this.getBoundingClientRect();
-            if (event.clientX < rect.left || event.clientX > rect.right ||
-                event.clientY < rect.top || event.clientY > rect.bottom) {
+        // Check if really leaving the entire element area, not entering a child element
+        const rect = this.getBoundingClientRect();
+        if (event.clientX < rect.left || event.clientX > rect.right ||
+            event.clientY < rect.top || event.clientY > rect.bottom) {
 
-                this.classList.remove('drag-over');
-                this.style.background = '';
-                this.style.boxShadow = '';
-                this.style.transform = '';
+            this.classList.remove('drag-over');
+            this.style.background = '';
+            this.style.boxShadow = '';
+            this.style.transform = '';
 
-                // Reset drag-drop indicator
-                const indicator = this.querySelector('.drag-drop-indicator');
-                if (indicator) {
-                    indicator.style.animation = '';
-                    indicator.style.opacity = '0.6';
-                    indicator.style.display = 'none';
-                }
-
-                // Restore icon style
-                const folderIcon = this.querySelector('svg.lucide-folder');
-                if (folderIcon) {
-                    folderIcon.style.transform = '';
-                    folderIcon.style.color = '';
-                }
+            // Reset drag drop indicator
+            const indicator = this.querySelector('.drag-drop-indicator');
+            if (indicator) {
+                indicator.style.animation = '';
+                indicator.style.opacity = '0.6';
+                indicator.style.display = 'none';
             }
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Drag leave target error:`, error);
+
+            // Restore icon styles
+            const folderIcon = this.querySelector('svg.lucide-folder');
+            if (folderIcon) {
+                folderIcon.style.transform = '';
+                folderIcon.style.color = '';
+            }
         }
     };
 
     const handleDrop = function(event) {
-        try {
-            event.preventDefault();
-            event.currentTarget.classList.remove('drag-over');
-            event.currentTarget.style.background = '';
-            event.currentTarget.style.boxShadow = '';
-            let dragData;
-            try {
-                const dataString = event.dataTransfer.getData('application/t3chat-item') || event.dataTransfer.getData('text/plain');
-                dragData = JSON.parse(dataString);
-                // console.log(`${SCRIPT_PREFIX} Successfully got drag data:, dragData.type, dragData.url);
-            } catch (parseError) {
-                console.error(`${SCRIPT_PREFIX} Failed to parse drag data:`, parseError);
-                return;
+        event.preventDefault();
+        event.currentTarget.classList.remove('drag-over');
+        event.currentTarget.style.background = '';
+        event.currentTarget.style.boxShadow = '';
+        let dragData;
+        const dataString = event.dataTransfer.getData('application/t3chat-item') || event.dataTransfer.getData('text/plain');
+        dragData = JSON.parse(dataString);
+        if (dragData.type === 'chat-item') {
+            const projectId = event.currentTarget.getAttribute('data-project-id');
+            if (projectId) {
+                addChatToProject(dragData, projectId);
+                // 確保項目內容展開顯示
+                toggleProjectContent(projectId);
             }
-            if (dragData.type === 'chat-item') {
-                const projectId = event.currentTarget.getAttribute('data-project-id');
-                if (projectId) {
-                    // console.log(`${SCRIPT_PREFIX} Trying to add chat ${dragData.title} to project ${projectId}`);
-                    addChatToProject(dragData, projectId);
-                    // Ensure project content is expanded and displayed
-                    toggleProjectContent(projectId);
-                    // console.log(`${SCRIPT_PREFIX} [Drag Diagnostics] Added successfully);
-                }
-            }
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Drop error:`, error);
         }
     };
 
-    // ***Correction: Define makeProjectContainersDroppable function***
+    // ***Fix Point: Define makeProjectContainersDroppable function***
     const makeProjectContainersDroppable = () => {
-        try {
-            console.log(`${SCRIPT_PREFIX} ===== Starting to reset drag and drop functionality for all projects =====`);
-
-            // Get all project containers
-            const projectContainers = document.querySelectorAll('a[data-project-id]');
-            console.log(`${SCRIPT_PREFIX} Found ${projectContainers.length} project containers`);
+        // Get all project containers
+        const projectContainers = document.querySelectorAll('a[data-project-id]');
 
             projectContainers.forEach((container, index) => {
                 const projectId = container.getAttribute('data-project-id');
-                console.log(`${SCRIPT_PREFIX} Setting up drag and drop for project ${projectId} (index: ${index})`);
 
-                // Remove all existing drag-drop helper elements, force re-creation
+                // Remove all existing drag and drop helper elements, force recreation
                 const existingHelper = container.querySelector('.drop-helper-zone');
                 if (existingHelper) {
                     existingHelper.remove();
@@ -1217,7 +962,7 @@ window.removeProjectAllModeInterceptor = function() {
                 // Set necessary styles
                 container.style.position = 'relative';
 
-                // Create or update drag-drop helper zone
+                // Create or update drag and drop helper area
                 let dropHelper = container.querySelector('.drop-helper-zone');
                 if (dropHelper) {
                     dropHelper.remove();
@@ -1259,14 +1004,13 @@ window.removeProjectAllModeInterceptor = function() {
                 const dragEnterHandler = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log(`${SCRIPT_PREFIX} Drag entered project ${projectId}`);
                 };
 
                 const dragLeaveHandler = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
 
-                    // Check if truly left the container area
+                    // Check if really leaving the container area
                     const rect = container.getBoundingClientRect();
                     if (e.clientX < rect.left || e.clientX > rect.right ||
                         e.clientY < rect.top || e.clientY > rect.bottom) {
@@ -1288,8 +1032,6 @@ window.removeProjectAllModeInterceptor = function() {
                     e.preventDefault();
                     e.stopPropagation();
 
-                    console.log(`${SCRIPT_PREFIX} Dropped onto project ${projectId}`);
-
                     // Reset styles
                     container.classList.remove('drag-over');
                     container.style.background = '';
@@ -1302,55 +1044,46 @@ window.removeProjectAllModeInterceptor = function() {
                         folderIcon.style.transform = '';
                     }
 
-                    try {
-                        const dataString = e.dataTransfer.getData('application/t3chat-item') ||
-                                         e.dataTransfer.getData('text/plain');
+                    const dataString = e.dataTransfer.getData('application/t3chat-item') ||
+                                     e.dataTransfer.getData('text/plain');
 
-                        if (!dataString) {
-                            console.error(`${SCRIPT_PREFIX} Project ${projectId} could not get drag data`);
-                            return;
-                        }
+                    if (!dataString) {
+                        return;
+                    }
 
-                        const dragData = JSON.parse(dataString);
-                        console.log(`${SCRIPT_PREFIX} Project ${projectId} successfully parsed drag data:`, dragData);
+                    const dragData = JSON.parse(dataString);
 
-                        if (dragData.type === 'chat-item') {
-                            console.log(`${SCRIPT_PREFIX} Adding chat "${dragData.title}" to project ${projectId}`);
+                    if (dragData.type === 'chat-item') {
 
-                            // Add chat to project
-                            addChatToProject(dragData, projectId);
+                        // Add chat to project
+                        addChatToProject(dragData, projectId);
 
-                            // Important: Ensure project is expanded and content is displayed
+                        // Important: Ensure project expands and shows content
+                        setTimeout(() => {
+                            toggleProjectContent(projectId);
+
+                            // Ensure UI updates again
                             setTimeout(() => {
-                                console.log(`${SCRIPT_PREFIX} Attempting to expand project ${projectId}`);
-                                toggleProjectContent(projectId);
-
-                                // Re-ensure UI update
-                                setTimeout(() => {
-                                    updateProjectUI(projectId);
-                                    console.log(`${SCRIPT_PREFIX} Project ${projectId} UI update complete`);
-                                }, 100);
-                            }, 50);
-                        }
-                    } catch (error) {
-                        console.error(`${SCRIPT_PREFIX} Project ${projectId} error processing drag data:`, error);
+                                updateProjectUI(projectId);
+                            }, 100);
+                        }, 50);
                     }
                 };
 
-                // Add event listeners to container and helper zone
+                // Add event listeners for container and helper area
                 container.addEventListener('dragover', dragOverHandler);
                 container.addEventListener('dragenter', dragEnterHandler);
                 container.addEventListener('dragleave', dragLeaveHandler);
                 container.addEventListener('drop', dropHandler);
 
-                // Also add event listeners to the helper zone
+                // Also add event listeners for helper area
                 dropHelper.style.pointerEvents = 'auto';
                 dropHelper.addEventListener('dragover', dragOverHandler);
                 dropHelper.addEventListener('dragenter', dragEnterHandler);
                 dropHelper.addEventListener('dragleave', dragLeaveHandler);
                 dropHelper.addEventListener('drop', dropHandler);
 
-                // Create cleanup function to clear event listeners on next reset
+                // Create cleanup function for cleaning event listeners on next reset
                 container._cleanupDragEvents = () => {
                     container.removeEventListener('dragover', dragOverHandler);
                     container.removeEventListener('dragenter', dragEnterHandler);
@@ -1365,7 +1098,7 @@ window.removeProjectAllModeInterceptor = function() {
                         helper.removeEventListener('drop', dropHandler);
                     }
 
-                    console.log(`${SCRIPT_PREFIX} Cleaned up drag and drop event listeners for project ${projectId}`);
+
                 };
 
                 // Add visual indicator
@@ -1414,41 +1147,28 @@ window.removeProjectAllModeInterceptor = function() {
 
                 // Mark as set up
                 container._dragHandlersAttached = true;
-                console.log(`${SCRIPT_PREFIX} Project ${projectId} drag and drop functionality setup complete`);
             });
-
-            console.log(`${SCRIPT_PREFIX} ===== All project drag and drop functionality setup complete =====`);
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} makeProjectContainersDroppable error:`, error);
-        }
     };
 
 
     const addChatToProject = (chatData, projectId) => {
-        try {
-            const projects = loadProjectsFromStorage();
-            const projectIndex = projects.findIndex(p => p.id === projectId);
-            if (projectIndex >= 0) {
-                if (!projects[projectIndex].chats) {
-                    projects[projectIndex].chats = [];
-                }
-                const existingChatIndex = projects[projectIndex].chats.findIndex(c => c.url === chatData.url);
-                if (existingChatIndex < 0) {
-                    projects[projectIndex].chats.push({
-                        url: chatData.url,
-                        title: chatData.title,
-                        addedAt: Date.now(),
-                        sourceElement: chatData.sourceElement
-                    });
-                    saveProjectsToStorage(projects);
-                    updateProjectUI(projectId); // Ensure updateProjectUI is defined
-                    // console.log(`${SCRIPT_PREFIX} Successfully added chat "${chatData.title}" to project);
-                } else {
-                    // console.log(`${SCRIPT_PREFIX} This chat already exists in the project);
-                }
+        const projects = loadProjectsFromStorage();
+        const projectIndex = projects.findIndex(p => p.id === projectId);
+        if (projectIndex >= 0) {
+            if (!projects[projectIndex].chats) {
+                projects[projectIndex].chats = [];
             }
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Error adding chat to project:`, error);
+            const existingChatIndex = projects[projectIndex].chats.findIndex(c => c.url === chatData.url);
+            if (existingChatIndex < 0) {
+                projects[projectIndex].chats.push({
+                    url: chatData.url,
+                    title: chatData.title,
+                    addedAt: Date.now(),
+                    sourceElement: chatData.sourceElement
+                });
+                saveProjectsToStorage(projects);
+                updateProjectUI(projectId); // Ensure updateProjectUI is defined
+            }
         }
     };
 
@@ -1468,66 +1188,57 @@ window.removeProjectAllModeInterceptor = function() {
                 }
             }
             if (needsUpdate) {
-                // console.log(`${SCRIPT_PREFIX} DOM change detected, resetting drag and drop functionality);
                 makeChatsItemsDraggable();
                 makeProjectContainersDroppable();
             }
         });
         observer.observe(document.body, { childList: true, subtree: true });
-        // console.log(`${SCRIPT_PREFIX} DOM observer started to monitor drag element changes);
     };
 
-    const showSuccessToast = (message) => { console.log(`${SCRIPT_PREFIX} Success: ${message}`); };
-    const showErrorToast = (message) => { console.error(`${SCRIPT_PREFIX} Error: ${message}`); };
-    const showInfoToast = (message) => { console.log(`${SCRIPT_PREFIX} Info: ${message}`); };
-    const showToast = (message, type = 'info') => { console.log(`${SCRIPT_PREFIX} ${type}: ${message}`); };
+    const showSuccessToast = (message) => { };
+    const showErrorToast = (message) => { };
+    const showInfoToast = (message) => { };
+    const showToast = (message, type = 'info') => { };
 
-    // Add function to manage chat highlight state
+    // Add function to manage chat highlighting status
     const manageChatHighlighting = (activeUrl) => {
-        try {
-            // Remove highlight state from all chat items (including Project chat items and regular chat items)
-            const allChatItems = document.querySelectorAll('a[href^="/chat/"]:not([data-project-id])');
-            const allProjectChatItems = document.querySelectorAll('a[data-project-chat-id]');
+        // Remove highlight status from all chat items (including Project chat items and regular chat items)
+        const allChatItems = document.querySelectorAll('a[href^="/chat/"]:not([data-project-id])');
+        const allProjectChatItems = document.querySelectorAll('a[data-project-chat-id]');
 
-            // Reset highlight for regular chat items
-            allChatItems.forEach(item => {
-                item.classList.remove('bg-sidebar-accent', 'text-sidebar-accent-foreground');
-                item.classList.add('text-muted-foreground');
-            });
+        // Reset highlighting for regular chat items
+        allChatItems.forEach(item => {
+            item.classList.remove('bg-sidebar-accent', 'text-sidebar-accent-foreground');
+            item.classList.add('text-muted-foreground');
+        });
 
-            // Reset highlight for Project chat items
-            allProjectChatItems.forEach(item => {
-                item.classList.remove('bg-sidebar-accent', 'text-sidebar-accent-foreground');
-                item.classList.add('text-muted-foreground');
-            });
+        // Reset highlighting for Project chat items
+        allProjectChatItems.forEach(item => {
+            item.classList.remove('bg-sidebar-accent', 'text-sidebar-accent-foreground');
+            item.classList.add('text-muted-foreground');
+        });
 
-            // If activeUrl is provided, highlight the corresponding item
-            if (activeUrl) {
-                // Highlight regular chat item
-                const activeChatItem = document.querySelector(`a[href="${activeUrl}"]:not([data-project-chat-id])`);
-                if (activeChatItem) {
-                    activeChatItem.classList.add('bg-sidebar-accent', 'text-sidebar-accent-foreground');
-                    activeChatItem.classList.remove('text-muted-foreground');
-                }
-
-                // Highlight corresponding Project chat item
-                const activeProjectChatItem = document.querySelector(`a[href="${activeUrl}"][data-project-chat-id]`);
-                if (activeProjectChatItem) {
-                    activeProjectChatItem.classList.add('bg-sidebar-accent', 'text-sidebar-accent-foreground');
-                    activeProjectChatItem.classList.remove('text-muted-foreground');
-                }
+        // If activeUrl is provided, highlight the corresponding item
+        if (activeUrl) {
+            // Highlight regular chat item
+            const activeChatItem = document.querySelector(`a[href="${activeUrl}"]:not([data-project-chat-id])`);
+            if (activeChatItem) {
+                activeChatItem.classList.add('bg-sidebar-accent', 'text-sidebar-accent-foreground');
+                activeChatItem.classList.remove('text-muted-foreground');
             }
 
-            console.log(`${SCRIPT_PREFIX} Chat highlight state updated: ${activeUrl || 'None'}`);
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Error managing chat highlight state:`, error);
+            // Highlight corresponding Project chat item
+            const activeProjectChatItem = document.querySelector(`a[href="${activeUrl}"][data-project-chat-id]`);
+            if (activeProjectChatItem) {
+                activeProjectChatItem.classList.add('bg-sidebar-accent', 'text-sidebar-accent-foreground');
+                activeProjectChatItem.classList.remove('text-muted-foreground');
+            }
         }
     };
 
     const updateProjectUI = (projectId) => {
-        try {
-            const projectContainer = document.querySelector(`a[data-project-id="${projectId}"]`);
-            if (!projectContainer) return;
+        const projectContainer = document.querySelector(`a[data-project-id="${projectId}"]`);
+        if (!projectContainer) return;
             let projectContent = document.querySelector(`div[data-project-content="${projectId}"]`);
             if (!projectContent) {
                 projectContent = document.createElement('div');
@@ -1555,11 +1266,16 @@ window.removeProjectAllModeInterceptor = function() {
                             chatItem.classList.add('project-chat-item');
                             chatItem.style.paddingLeft = '24px'; // Increased indent for better visual hierarchy
 
-                            // Prevent page refresh on click - enhance SPA navigation
+                            // Prevent page refresh on click - enhanced SPA navigation
                             chatItem.addEventListener('click', (e) => {
+                                // Check if click is from delete button
+                                if (e.target.closest('.remove-chat-btn')) {
+                                    return; // If clicking delete button, don't handle navigation
+                                }
+
                                 e.preventDefault();
                                 e.stopPropagation();
-                                // Note: Do not use stopImmediatePropagation, allow event to bubble normally
+                                // Note: don't use stopImmediatePropagation, let event bubble normally
 
                                 // Check if this is a programmatic click
                                 if (chatItem.hasAttribute('data-programmatic-click')) {
@@ -1570,23 +1286,22 @@ window.removeProjectAllModeInterceptor = function() {
                                 // SPA navigation to chat URL
                                 const chatUrl = chatItem.getAttribute('href');
                                 if (chatUrl) {
-                                    console.log(`${SCRIPT_PREFIX} SPA navigation to Project chat: ${chatUrl}`);
 
-                                    // Immediately update highlight state
+                                    // Immediately update highlight status
                                     manageChatHighlighting(chatUrl);
 
-                                    // Try to find the corresponding chat item in the sidebar and click it
+                                    // Try to find corresponding chat item in sidebar and click it
                                     const sidebarChatLink = document.querySelector(`a[href="${chatUrl}"]:not([data-project-chat-id])`);
                                     if (sidebarChatLink) {
-                                        // Mark as programmatic click to avoid reprocessing
+                                        // Mark as programmatic click to avoid duplicate handling
                                         sidebarChatLink.setAttribute('data-programmatic-click', 'true');
                                         sidebarChatLink.click();
                                     } else {
-                                        // Use History API for navigation
+                                        // Use History API navigation
                                         history.pushState({}, '', chatUrl);
                                         window.dispatchEvent(new PopStateEvent('popstate', { bubbles: true, cancelable: true, state: {} }));
 
-                                        // Re-ensure highlight state is correct
+                                        // Ensure highlight status is correct again
                                         setTimeout(() => {
                                             manageChatHighlighting(chatUrl);
                                         }, 100);
@@ -1596,36 +1311,43 @@ window.removeProjectAllModeInterceptor = function() {
                                 return false;
                             }, true);
 
-                            // Prevent other mouse events from triggering navigation
-                            chatItem.addEventListener('mousedown', (e) => e.preventDefault(), true);
-                            chatItem.addEventListener('mouseup', (e) => e.preventDefault(), true);
+                            // Modify mouse event handling, also check if it's delete button
+                            chatItem.addEventListener('mousedown', (e) => {
+                                if (!e.target.closest('.remove-chat-btn')) {
+                                    e.preventDefault();
+                                }
+                            }, true);
+                            chatItem.addEventListener('mouseup', (e) => {
+                                if (!e.target.closest('.remove-chat-btn')) {
+                                    e.preventDefault();
+                                }
+                            }, true);
 
                             const actionDiv = chatItem.querySelector('.pointer-events-auto');
                             if (actionDiv) {
                                 actionDiv.innerHTML = `
                                     <div class="pointer-events-none absolute bottom-0 right-[100%] top-0 h-12 w-8 bg-gradient-to-l from-sidebar-accent to-transparent opacity-0 group-hover/link:opacity-100"></div>
-                                    <button class="rounded-md p-1.5 hover:bg-destructive/50 hover:text-destructive-foreground remove-chat-btn" tabindex="-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x">
+                                    <button class="rounded-md hover:bg-destructive/50 hover:text-destructive-foreground remove-chat-btn" tabindex="-1" style="width: 29.75px; height: 29.75px; display: flex; align-items: center; justify-content: center;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x">
                                             <path d="M18 6 6 18"></path>
                                             <path d="m6 6 12 12"></path>
                                         </svg>
                                     </button>
                                 `;
+
                                 const removeBtn = actionDiv.querySelector('.remove-chat-btn');
                                 if (removeBtn) {
                                     removeBtn.addEventListener('click', (event) => {
                                         event.preventDefault();
                                         event.stopPropagation();
+                                        event.stopImmediatePropagation();
+
                                         removeChatFromProject(chat.url, projectId);
-                                        chatItem.remove();
-                                        if (projectContent.children.length === 0) {
-                                            projectContent.style.display = 'none';
-                                        } else {
-                                            // Recalculate height after removal
-                                            updateProjectContentHeight(projectContent, projectContent.children.length);
-                                        }
-                                    });
+                                        updateProjectUI(projectId);
+                                    }, true);
                                 }
+                            } else {
+                                // actionDiv not found - this is handled silently
                             }
                             // Dynamic title update to reflect stored chat.title
                             const displayTitle = chat.title;
@@ -1651,6 +1373,11 @@ window.removeProjectAllModeInterceptor = function() {
 
                         // Prevent page refresh on click
                         chatItem.addEventListener('click', (e) => {
+                            // Check if click is from delete button
+                            if (e.target.closest('.remove-chat-btn')) {
+                                return; // If clicking delete button, don't handle navigation
+                            }
+
                             e.preventDefault();
 
                             // Check if this is a programmatic click
@@ -1662,15 +1389,14 @@ window.removeProjectAllModeInterceptor = function() {
                             // Navigate directly to chat URL
                             const chatUrl = chatItem.getAttribute('href');
                             if (chatUrl) {
-                                console.log(`${SCRIPT_PREFIX} Navigating to Project chat: ${chatUrl}`);
 
-                                // Immediately update highlight state
+                                // Immediately update highlight status
                                 manageChatHighlighting(chatUrl);
 
-                                // Try to find the corresponding chat item in the sidebar and click it
+                                // Try to find corresponding chat item in sidebar and click it
                                 const sidebarChatLink = document.querySelector(`a[href="${chatUrl}"]:not([data-project-chat-id])`);
                                 if (sidebarChatLink) {
-                                    // Mark as programmatic click to avoid reprocessing
+                                    // Mark as programmatic click to avoid duplicate handling
                                     sidebarChatLink.setAttribute('data-programmatic-click', 'true');
                                     sidebarChatLink.click();
                                 } else {
@@ -1685,20 +1411,19 @@ window.removeProjectAllModeInterceptor = function() {
                         title.textContent = chat.title;
                         chatItem.appendChild(title);
                         const removeBtn = document.createElement('button');
-                        removeBtn.className = 'absolute right-1 opacity-0 hover:opacity-100 group-hover:opacity-100 rounded-full hover:bg-muted/50 p-0.5';
-                        removeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>';
+                        removeBtn.className = 'absolute right-1 opacity-0 hover:opacity-100 group-hover:opacity-100 rounded-full hover:bg-muted/50';
+                        removeBtn.style.cssText = 'width: 29.75px; height: 29.75px; display: flex; align-items: center; justify-content: center;';
+                        removeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>';
+
                         removeBtn.addEventListener('click', (event) => {
                             event.preventDefault();
                             event.stopPropagation();
+                            event.stopImmediatePropagation();
+
                             removeChatFromProject(chat.url, projectId);
-                            chatItem.remove();
-                            if (projectContent.children.length === 0) {
-                                projectContent.style.display = 'none';
-                            } else {
-                                // Recalculate height after removal
-                                updateProjectContentHeight(projectContent, projectContent.children.length);
-                            }
-                        });
+                            updateProjectUI(projectId);
+                        }, true);
+
                         chatItem.appendChild(removeBtn);
                         chatItem.addEventListener('mouseenter', () => { removeBtn.style.opacity = '1'; });
                         chatItem.addEventListener('mouseleave', () => { removeBtn.style.opacity = '0'; });
@@ -1712,9 +1437,6 @@ window.removeProjectAllModeInterceptor = function() {
                 // Persist any updated titles
                 saveProjectsToStorage(projects);
             }
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Error updating project UI:`, error);
-        }
     };
 
     // Helper function to update project content height
@@ -1735,15 +1457,17 @@ window.removeProjectAllModeInterceptor = function() {
     };
 
     const removeChatFromProject = (chatUrl, projectId) => {
-        try {
-            const projects = loadProjectsFromStorage();
-            const projectIndex = projects.findIndex(p => p.id === projectId);
-            if (projectIndex >= 0 && projects[projectIndex].chats) {
+        const projects = loadProjectsFromStorage();
+        const projectIndex = projects.findIndex(p => p.id === projectId);
+
+        if (projectIndex >= 0) {
+            if (projects[projectIndex].chats) {
                 projects[projectIndex].chats = projects[projectIndex].chats.filter(chat => chat.url !== chatUrl);
                 saveProjectsToStorage(projects);
 
                 // Update the project content height after removal
                 const projectContent = document.querySelector(`div[data-project-content="${projectId}"]`);
+
                 if (projectContent) {
                     if (projects[projectIndex].chats.length === 0) {
                         projectContent.style.display = 'none';
@@ -1754,18 +1478,13 @@ window.removeProjectAllModeInterceptor = function() {
 
                 showSuccessToast('Chat removed from project');
             }
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Error removing chat from project:`, error);
-            showErrorToast('Failed to remove chat');
         }
     };
 
     const createProjectItem = (projectData, contentSidebar) => {
-        try {
-            if (!contentSidebar || !projectData) {
-                console.warn(`${SCRIPT_PREFIX} Invalid project data or sidebar`);
-                return null;
-            }
+        if (!contentSidebar || !projectData) {
+            return null;
+        }
             const threadLink = document.createElement('a');
             threadLink.className = 'group/link relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring hover:focus-visible:bg-sidebar-accent bg-sidebar-accent text-sidebar-accent-foreground';
             threadLink.removeAttribute('href');
@@ -1777,17 +1496,17 @@ window.removeProjectAllModeInterceptor = function() {
             threadLink.style.width = 'auto';
             threadLink.style.flex = '1 1 auto';
             threadLink.style.cursor = 'pointer';
-            threadLink.style.userSelect = 'none'; // Prevent text selection
+            threadLink.style.userSelect = 'none'; // 防止文本選擇
             threadLink.addEventListener('click', (event) => {
-                // Check if the click came from the triangle icon
+                // 檢查點擊是否來自三角形圖標
                 if (event.target.closest('.triangle-icon')) {
-                    return; // If the triangle icon was clicked, do not handle this event
+                    return; // 如果點擊的是三角形圖標，不處理這個事件
                 }
 
                 event.preventDefault();
                 event.stopPropagation();
 
-                // Prevent rapid clicks from triggering rename
+                // 防止快速點擊觸發重命名
                 const currentTime = Date.now();
                 if (!threadLink._lastClickTime) {
                     threadLink._lastClickTime = currentTime;
@@ -1795,7 +1514,7 @@ window.removeProjectAllModeInterceptor = function() {
                     const timeDiff = currentTime - threadLink._lastClickTime;
                     threadLink._lastClickTime = currentTime;
 
-                    // If click interval is too short, ignore this click
+                    // 如果點擊間隔太短，忽略這次點擊
                     if (timeDiff < 300) {
                         return;
                     }
@@ -1824,15 +1543,14 @@ window.removeProjectAllModeInterceptor = function() {
             `;
             triangleIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="8,4 16,12 8,20"></polygon></svg>';
 
-            // Add independent click event for the triangle icon
+            // 為三角形圖標添加獨立的點擊事件
             triangleIcon.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                console.log(`${SCRIPT_PREFIX} Triangle icon clicked, toggling project ${projectData.id}`);
                 toggleProjectContent(projectData.id);
             });
 
-            // Add hover effect for the triangle icon
+            // 為三角形圖標添加懸停效果
             triangleIcon.addEventListener('mouseenter', () => {
                 triangleIcon.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
             });
@@ -1866,7 +1584,7 @@ window.removeProjectAllModeInterceptor = function() {
             input.title = projectData.title || 'Project';
             input.type = 'text';
             input.value = projectData.title || 'Project';
-            input.style.userSelect = 'none'; // Prevent text selection
+            input.style.userSelect = 'none'; // 防止文本選擇
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'pointer-events-auto absolute -right-1 bottom-0 top-0 z-50 flex translate-x-full items-center justify-end text-muted-foreground transition-transform group-hover/link:translate-x-0 group-hover/link:bg-sidebar-accent';
@@ -1927,10 +1645,8 @@ window.removeProjectAllModeInterceptor = function() {
                     if (projectPinGroup) {
                         const projectItems = projectPinGroup.querySelector('.project-pin-items');
                         if (projectItems && projectItems.querySelectorAll('a[data-project-id][data-pinned="true"]').length === 0) {
-                            // console.log(`${SCRIPT_PREFIX} Project Pin area is empty, removing...);
                             projectPinGroup.remove();
                         } else if (!projectItems) {
-                             // console.log(`${SCRIPT_PREFIX} Project Pin area internal structure abnormal, removing...);
                             projectPinGroup.remove();
                         }
                     }
@@ -1956,13 +1672,13 @@ window.removeProjectAllModeInterceptor = function() {
                 saveProjectState();
             };
 
-            // Only add double-click event to input area, and add debounce mechanism
+            // 只在輸入框區域添加雙擊事件，並且增加防抖機制
             let doubleClickTimeout = null;
             input.addEventListener('dblclick', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
 
-                // Clear previous delay to ensure it doesn't trigger repeatedly
+                // 清除之前的延遲，確保不會重複觸發
                 if (doubleClickTimeout) {
                     clearTimeout(doubleClickTimeout);
                 }
@@ -1973,7 +1689,7 @@ window.removeProjectAllModeInterceptor = function() {
                 }, 50);
             });
 
-            // Remove original double-click event on threadLink to avoid conflict
+            // 移除原來在 threadLink 上的雙擊事件，避免衝突
             input.addEventListener('blur', finishRenaming);
 
             threadLink.addEventListener('dblclick', (event) => {
@@ -2105,15 +1821,14 @@ window.removeProjectAllModeInterceptor = function() {
 
                 const isPinned = threadLink.getAttribute('data-pinned') === 'true';
                 if (isPinned) {
-                    const unpinOption = document.createElement('div');
-                    // ... (unpin option creation)
-                    unpinOption.setAttribute('role', 'menuitem');
-                    unpinOption.className = 'relative cursor-default select-none rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent/30 focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 flex flex-row items-center';
-                    unpinOption.tabIndex = -1;
-                    unpinOption.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pin-off mr-2 size-4" aria-hidden="true"><path d="M12 17v5"></path><path d="M15 9.34V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H7.89"></path><path d="m2 2 20 20"></path><path d="M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h11"></path></svg>Unpin';
-                    unpinOption.addEventListener('click', () => {
-                        // console.log(`${SCRIPT_PREFIX} Unpinning project...);
-                        const projectContent = document.querySelector(`div[data-project-content="${projectData.id}"]`);
+                                    const unpinOption = document.createElement('div');
+                // ... (unpin option creation)
+                unpinOption.setAttribute('role', 'menuitem');
+                unpinOption.className = 'relative cursor-default select-none rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent/30 focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 flex flex-row items-center';
+                unpinOption.tabIndex = -1;
+                unpinOption.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pin-off mr-2 size-4" aria-hidden="true"><path d="M12 17v5"></path><path d="M15 9.34V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H7.89"></path><path d="m2 2 20 20"></path><path d="M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h11"></path></svg>Unpin';
+                unpinOption.addEventListener('click', () => {
+                    const projectContent = document.querySelector(`div[data-project-content="${projectData.id}"]`);
                         if (document.body.contains(contextMenu)) document.body.removeChild(contextMenu);
 
                         threadLink.removeAttribute('data-pinned'); // Update state before DOM manipulation
@@ -2203,265 +1918,170 @@ window.removeProjectAllModeInterceptor = function() {
             innerDiv.appendChild(actionsDiv);
             threadLink.appendChild(innerDiv);
             return threadLink;
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Error creating project item:`, error);
-            return null;
-        }
     };
 
     // Define toggleProjectContent once in the IIFE scope
     const toggleProjectContent = (projectId) => {
-        try {
-            console.log(`${SCRIPT_PREFIX} ===== Toggling project content display: ${projectId} =====`);
-            const projectContainer = document.querySelector(`a[data-project-id="${projectId}"]`);
-            if (!projectContainer) {
-                console.error(`${SCRIPT_PREFIX} Project container not found: ${projectId}`);
-                return;
-            }
+        const projectContainer = document.querySelector(`a[data-project-id="${projectId}"]`);
+        if (!projectContainer) {
+            return;
+        }
 
-            let projectContent = document.querySelector(`div[data-project-content="${projectId}"]`);
+        let projectContent = document.querySelector(`div[data-project-content="${projectId}"]`);
 
-            // If project content container does not exist, create a new one
-            if (!projectContent) {
-                console.log(`${SCRIPT_PREFIX} Creating new project content container: ${projectId}`);
-                projectContent = document.createElement('div');
-                projectContent.setAttribute('data-project-content', projectId);
-                projectContent.className = 'pl-4 mt-1 space-y-1 project-content';
+        // 如果項目內容容器不存在，創建一個新的
+        if (!projectContent) {
+            projectContent = document.createElement('div');
+            projectContent.setAttribute('data-project-content', projectId);
+            projectContent.className = 'pl-4 mt-1 space-y-1 project-content';
 
-                // Ensure insertion at the correct position
-                if (projectContainer.nextSibling) {
-                    projectContainer.parentNode.insertBefore(projectContent, projectContainer.nextSibling);
-                } else {
-                    projectContainer.parentNode.appendChild(projectContent);
-                }
-            }
-
-            // Ensure triangle icon exists and is updated
-            let triangleIcon = projectContainer.querySelector('.triangle-icon');
-            if (!triangleIcon) {
-                const innerDiv = projectContainer.querySelector('.relative.flex.w-full.items-center');
-                if (innerDiv) {
-                    triangleIcon = document.createElement('div');
-                    triangleIcon.className = 'triangle-icon mr-1 text-muted-foreground';
-                    triangleIcon.style.cssText = `
-                        width: 12px;
-                        height: 12px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    `;
-                    triangleIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="8,4 16,12 8,20"></polygon></svg>';
-                    innerDiv.insertBefore(triangleIcon, innerDiv.firstChild);
-                }
-            }
-
-            // Check current expansion state
-            const isCurrentlyExpanded = projectContainer.getAttribute('data-expanded') === 'true';
-
-            if (!isCurrentlyExpanded) {
-                // Expand project content
-                console.log(`${SCRIPT_PREFIX} Expanding project content: ${projectId}`);
-
-                // Set expansion state
-                projectContainer.setAttribute('data-expanded', 'true');
-
-                // Update triangle icon to expanded state
-                if (triangleIcon) {
-                    triangleIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="4,8 20,8 12,16"></polygon></svg>';
-                }
-
-                // Display project content
-                projectContent.style.display = 'block';
-
-                // Force update project UI
-                console.log(`${SCRIPT_PREFIX} Forcing UI update for project ${projectId}`);
-                updateProjectUI(projectId);
-
-                // Ensure content is visible
-                setTimeout(() => {
-                    projectContent.style.opacity = '1';
-                    projectContent.style.visibility = 'visible';
-
-                    // Re-ensure drag and drop functionality is normal
-                    setTimeout(() => {
-                        // Clear current project's drag and drop flags, force reset
-                        const container = document.querySelector(`a[data-project-id="${projectId}"]`);
-                        if (container) {
-                            container._dragHandlersAttached = false;
-                        }
-                        makeProjectContainersDroppable();
-                        console.log(`${SCRIPT_PREFIX} Project ${projectId} expansion complete, drag and drop functionality reset`);
-                    }, 50);
-                }, 10);
-
+            // 確保插入到正確的位置
+            if (projectContainer.nextSibling) {
+                projectContainer.parentNode.insertBefore(projectContent, projectContainer.nextSibling);
             } else {
-                // Collapse project content
-                console.log(`${SCRIPT_PREFIX} Collapsing project content: ${projectId}`);
+                projectContainer.parentNode.appendChild(projectContent);
+            }
+        }
 
-                projectContainer.removeAttribute('data-expanded');
-                projectContent.style.display = 'none';
+        // 確保三角形圖標存在並更新
+        let triangleIcon = projectContainer.querySelector('.triangle-icon');
+        if (!triangleIcon) {
+            const innerDiv = projectContainer.querySelector('.relative.flex.w-full.items-center');
+            if (innerDiv) {
+                triangleIcon = document.createElement('div');
+                triangleIcon.className = 'triangle-icon mr-1 text-muted-foreground';
+                triangleIcon.style.cssText = `
+                    width: 12px;
+                    height: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                `;
+                triangleIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="8,4 16,12 8,20"></polygon></svg>';
+                innerDiv.insertBefore(triangleIcon, innerDiv.firstChild);
+            }
+        }
 
-                // Update triangle icon to collapsed state
-                if (triangleIcon) {
-                    triangleIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="8,4 16,12 8,20"></polygon></svg>';
-                }
+        // 檢查當前展開狀態
+        const isCurrentlyExpanded = projectContainer.getAttribute('data-expanded') === 'true';
+
+        if (!isCurrentlyExpanded) {
+            // 展開項目內容
+
+            // 設置展開狀態
+            projectContainer.setAttribute('data-expanded', 'true');
+
+            // 更新三角形圖標為展開狀態
+            if (triangleIcon) {
+                triangleIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="4,8 20,8 12,16"></polygon></svg>';
             }
 
-            console.log(`${SCRIPT_PREFIX} ===== Project ${projectId} content toggle complete =====`);
+            // 顯示項目內容
+            projectContent.style.display = 'block';
 
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Error toggling project content:`, error);
+            // 強制更新項目UI
+            updateProjectUI(projectId);
 
-            // Error recovery: Attempt to force expand
-            try {
-                console.log(`${SCRIPT_PREFIX} Attempting error recovery, forcing expansion of project ${projectId}`);
-                const container = document.querySelector(`a[data-project-id="${projectId}"]`);
-                const content = document.querySelector(`div[data-project-content="${projectId}"]`);
+            // 確保內容可見
+            setTimeout(() => {
+                projectContent.style.opacity = '1';
+                projectContent.style.visibility = 'visible';
 
-                if (container && content) {
-                    container.setAttribute('data-expanded', 'true');
-                    content.style.display = 'block';
-                    updateProjectUI(projectId);
-
-                    const triangleIcon = container.querySelector('.triangle-icon');
-                    if (triangleIcon) {
-                        triangleIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="4,8 20,8 12,16"></polygon></svg>';
+                // 再次確保拖放功能正常
+                setTimeout(() => {
+                    // 清除當前項目的拖放標記，強制重新設置
+                    const container = document.querySelector(`a[data-project-id="${projectId}"]`);
+                    if (container) {
+                        container._dragHandlersAttached = false;
                     }
+                    makeProjectContainersDroppable();
+                }, 50);
+            }, 10);
 
-                    console.log(`${SCRIPT_PREFIX} Error recovery successful`);
-                }
-            } catch (recoveryError) {
-                console.error(`${SCRIPT_PREFIX} Error recovery failed:`, recoveryError);
+        } else {
+            // 收起項目內容
+
+            projectContainer.removeAttribute('data-expanded');
+            projectContent.style.display = 'none';
+
+            // 更新三角形圖標為收起狀態
+            if (triangleIcon) {
+                triangleIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="8,4 16,12 8,20"></polygon></svg>';
             }
         }
     };
 
 
     function setupGlobalFunctions() {
-        console.log(`${SCRIPT_PREFIX} Setting up global functions...`);
         window.createProjectItem = createProjectItem;
         window.loadProjectsFromStorage = loadProjectsFromStorage;
         window.saveProjectsToStorage = saveProjectsToStorage;
         window.makeProjectContainersDroppable = makeProjectContainersDroppable;
         window.updateProjectUI = updateProjectUI;
-        window.addChatToProject = addChatToProject; // Ensure addChatToProject function is globally accessible
+        window.addChatToProject = addChatToProject; // 確保 addChatToProject 函數可全局訪問
         window.toggleProjectContent = toggleProjectContent;
-        window.manageChatHighlighting = manageChatHighlighting; // Add highlight management function to global scope
+        window.manageChatHighlighting = manageChatHighlighting; // 添加高亮管理函數到全局
 
-        // All button related functions already defined in global scope, confirming here
-        console.log(`${SCRIPT_PREFIX} getCurrentProjectId type:`, typeof window.getCurrentProjectId);
-        console.log(`${SCRIPT_PREFIX} createAllButton type:`, typeof window.createAllButton);
-
-        console.log(`${SCRIPT_PREFIX} Global functions setup complete`);
+        // All 按鈕相關函數已在全局範圍定義，這裡確認
     }
     setupGlobalFunctions();
 
     const safeQuerySelector = (selector, parent = document) => {
-        try {
-            if (!parent) return null;
-            return parent.querySelector(selector);
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Selector error "${selector}":`, error);
-            return null;
-        }
+        if (!parent) return null;
+        return parent.querySelector(selector);
     };
 
-    window.addEventListener('error', function(event) {
-        event.preventDefault();
-        if (event.error && event.error.message &&
-            (event.error.message.includes('Cannot read properties of null') ||
-             event.error.message.includes('selectionStart') ||
-             event.error.message.includes('selectionsStart'))) {
-            return true;
-        }
-        // console.error(`${SCRIPT_PREFIX} Global error caught:, event.error);
-    }, true);
+
 
     const domObserver = new MutationObserver((mutations, obs) => {
-        try {
-            // Check to prevent re-execution
-            if (window.T3_CHAT_INITIALIZED || window.T3_CHAT_INITIALIZING) {
-                console.log(`${SCRIPT_PREFIX} Already initialized or initializing, skipping`);
-                return;
-            }
+        // Prevent duplicate execution check
+        if (window.T3_CHAT_INITIALIZED || window.T3_CHAT_INITIALIZING) {
+            return;
+        }
+        const sidebarReady = document.querySelector('div[data-sidebar="content"]');
+        const newChatButton = document.querySelector('div.px-1');
 
-            console.log(`${SCRIPT_PREFIX} DOM observer triggered, checking if initialization is possible...`);
-            const sidebarReady = document.querySelector('div[data-sidebar="content"]');
-            const newChatButton = document.querySelector('div.px-1');
+        if (sidebarReady && newChatButton) {
 
-            if (sidebarReady && newChatButton) {
-                console.log(`${SCRIPT_PREFIX} Page ready, starting initialization...`);
+            // Set initializing flag
+            window.T3_CHAT_INITIALIZING = true;
 
-                // Set initializing flag
-                window.T3_CHAT_INITIALIZING = true;
+            // Immediately try to execute process()
+            setTimeout(() => {
+                // Ensure process function exists
+                if (typeof process !== 'function') {
+                    window.T3_CHAT_INITIALIZING = false;
+                    return;
+                }
 
-                // Immediately try to execute process()
-                setTimeout(() => {
-                    try {
-                        console.log(`${SCRIPT_PREFIX} Executing process() function...`);
+                const processed = process();
 
-                        // Ensure process function exists
-                        if (typeof process !== 'function') {
-                            console.warn(`${SCRIPT_PREFIX} process function does not exist, trying to redefine...`);
+                if (processed) {
+                    setTimeout(() => {
+                        const restored = restoreProjects();
+
+                        // Initialize drag and drop functionality
+                        setupDragAndDrop();
+
+                        // Check if All button needs to be created
+                        setTimeout(() => {
+                            if (typeof window.createAllButton === 'function') {
+                                const allButtonCreated = window.createAllButton();
+                            }
+
+                            // Mark initialization complete
+                            window.T3_CHAT_INITIALIZED = true;
                             window.T3_CHAT_INITIALIZING = false;
-                            return;
-                        }
+                        }, 1000);
+                    }, 500);
+                } else {
+                    window.T3_CHAT_INITIALIZING = false;
+                }
 
-                        const processed = process();
-                        console.log(`${SCRIPT_PREFIX} process() result:`, processed);
-
-                        if (processed) {
-                            console.log(`${SCRIPT_PREFIX} Project button created successfully, starting to restore projects...`);
-                            setTimeout(() => {
-                                try {
-                                    const restored = restoreProjects();
-                                    console.log(`${SCRIPT_PREFIX} restoreProjects() result:`, restored);
-
-                                    // Initialize drag and drop functionality
-                                    console.log(`${SCRIPT_PREFIX} Initializing drag and drop functionality...`);
-                                    setupDragAndDrop();
-
-                                    // Check if All button needs to be created
-                                    setTimeout(() => {
-                                        if (typeof window.createAllButton === 'function') {
-                                            const allButtonCreated = window.createAllButton();
-                                            console.log(`${SCRIPT_PREFIX} All button creation result:`, allButtonCreated);
-                                        }
-
-                                        // Mark initialization as complete
-                                        window.T3_CHAT_INITIALIZED = true;
-                                        window.T3_CHAT_INITIALIZING = false;
-                                    }, 1000);
-
-                                    console.log(`${SCRIPT_PREFIX} ✅ Full initialization successful!`);
-                                } catch (restoreError) {
-                                    console.error(`${SCRIPT_PREFIX} Error restoring projects:`, restoreError);
-                                    window.T3_CHAT_INITIALIZING = false;
-                                }
-                            }, 500);
-                        } else {
-                            console.warn(`${SCRIPT_PREFIX} ⚠️ process() failed, not retrying to avoid re-execution`);
-                            window.T3_CHAT_INITIALIZING = false;
-                        }
-
-                        // Disconnect observer after successful initialization
-                        obs.disconnect();
-                        console.log(`${SCRIPT_PREFIX} DOM observer disconnected`);
-
-                    } catch (error) {
-                        console.error(`${SCRIPT_PREFIX} Error during initialization process:`, error);
-                        window.T3_CHAT_INITIALIZING = false;
-                    }
-                }, window.ARC_BROWSER_DETECTED ? 1000 : 300);
-            } else {
-                console.log(`${SCRIPT_PREFIX} Page not yet ready:`, {
-                    sidebarReady: !!sidebarReady,
-                    newChatButton: !!newChatButton
-                });
-            }
-        } catch (error) {
-            console.error(`${SCRIPT_PREFIX} Error in DOM observer handling:`, error);
-            window.T3_CHAT_INITIALIZING = false;
+                // Disconnect observer after successful initialization
+                obs.disconnect();
+            }, 300);
+        } else {
         }
     });
 
@@ -2472,100 +2092,69 @@ window.removeProjectAllModeInterceptor = function() {
         attributes: true,
         attributeFilter: ['class', 'data-sidebar']
     });
-    console.log(`${SCRIPT_PREFIX} DOM observer started`);
 
     // Immediately check if initialization is already possible
     setTimeout(() => {
-        // Check to prevent re-execution
+        // Prevent duplicate execution check
         if (window.T3_CHAT_INITIALIZED || window.T3_CHAT_INITIALIZING) {
-            console.log(`${SCRIPT_PREFIX} Immediate check: Already initialized or initializing, skipping`);
             return;
         }
-
-        console.log(`${SCRIPT_PREFIX} Immediately checking initialization conditions...`);
         const sidebarReady = document.querySelector('div[data-sidebar="content"]');
         const newChatButton = document.querySelector('div.px-1');
 
         if (sidebarReady && newChatButton) {
-            console.log(`${SCRIPT_PREFIX} Immediate initialization conditions met`);
 
             // Set initializing flag
             window.T3_CHAT_INITIALIZING = true;
 
-            // If initialization is already possible, execute immediately
+            // If already ready for initialization, execute immediately
             if (typeof process === 'function') {
                 const processed = process();
-                console.log(`${SCRIPT_PREFIX} Immediate initialization process() result:`, processed);
 
                 if (processed) {
                     domObserver.disconnect();
-                    console.log(`${SCRIPT_PREFIX} Immediate initialization successful, disconnecting observer`);
 
                     setTimeout(() => {
-                        try {
-                            const restored = restoreProjects();
-                            console.log(`${SCRIPT_PREFIX} Immediate restore projects result:`, restored);
-                            setupDragAndDrop();
+                        const restored = restoreProjects();
+                        setupDragAndDrop();
 
-                            // Immediately check All button
-                            setTimeout(() => {
-                                if (typeof window.createAllButton === 'function') {
-                                    const allButtonCreated = window.createAllButton();
-                                    console.log(`${SCRIPT_PREFIX} Immediate All button check result:`, allButtonCreated);
-                                }
+                        // Immediately check All button
+                        setTimeout(() => {
+                            if (typeof window.createAllButton === 'function') {
+                                const allButtonCreated = window.createAllButton();
+                            }
 
-                                // Mark initialization as complete
-                                window.T3_CHAT_INITIALIZED = true;
-                                window.T3_CHAT_INITIALIZING = false;
-                            }, 1000);
-
-                            console.log(`${SCRIPT_PREFIX} ✅ Immediate initialization fully successful!`);
-                        } catch (error) {
-                            console.error(`${SCRIPT_PREFIX} Error during immediate initialization restore projects:`, error);
+                            // Mark initialization complete
+                            window.T3_CHAT_INITIALIZED = true;
                             window.T3_CHAT_INITIALIZING = false;
-                        }
-                    }, window.ARC_BROWSER_DETECTED ? 1000 : 300);
+                        }, 1000);
+                    }, 300);
                 } else {
                     window.T3_CHAT_INITIALIZING = false;
                 }
             } else {
-                console.warn(`${SCRIPT_PREFIX} process function not yet defined, waiting...`);
                 window.T3_CHAT_INITIALIZING = false;
             }
         } else {
-            console.log(`${SCRIPT_PREFIX} Immediate initialization conditions not met, waiting for DOM observer...`);
         }
-    }, window.ARC_BROWSER_DETECTED ? 2000 : 500);
+    }, 500);
 
     window.addEventListener('selectionchange', (event) => {
-        try {
-            const selection = window.getSelection();
-            if (!selection || !selection.anchorNode) {
-                event.preventDefault();
-                return;
-            }
-        } catch (e) {
+        const selection = window.getSelection();
+        if (!selection || !selection.anchorNode) {
             event.preventDefault();
+            return;
         }
     }, true);
 
-    try {
-        const originalGetSelection = window.getSelection;
-        window.getSelection = function() {
-            try {
-                const selection = originalGetSelection.apply(window);
-                if (!selection) {
-                    return { toString: () => '', anchorNode: null, focusNode: null, anchorOffset: 0, focusOffset: 0, rangeCount: 0, getRangeAt: () => null, addRange: () => {}, removeAllRanges: () => {}, isCollapsed: true, collapse: () => {}, extend: () => {}, setBaseAndExtent: () => {}, selectAllChildren: () => {}, removeRange: () => {}, containsNode: () => false, deleteFromDocument: () => {}, setPosition: () => {} };
-                }
-                return selection;
-            } catch (e) {
-                console.error(`${SCRIPT_PREFIX} Safe getSelection error caught:`, e);
-                return { toString: () => '', anchorNode: null, focusNode: null, anchorOffset: 0, focusOffset: 0, rangeCount: 0, getRangeAt: () => null, addRange: () => {}, removeAllRanges: () => {}, isCollapsed: true, collapse: () => {}, extend: () => {}, setBaseAndExtent: () => {}, selectAllChildren: () => {}, removeRange: () => {}, containsNode: () => false, deleteFromDocument: () => {}, setPosition: () => {} };
-            }
-        };
-    } catch (e) {
-        console.error(`${SCRIPT_PREFIX} Failed to set up safe getSelection:`, e);
-    }
+    const originalGetSelection = window.getSelection;
+    window.getSelection = function() {
+        const selection = originalGetSelection.apply(window);
+        if (!selection) {
+            return { toString: () => '', anchorNode: null, focusNode: null, anchorOffset: 0, focusOffset: 0, rangeCount: 0, getRangeAt: () => null, addRange: () => {}, removeAllRanges: () => {}, isCollapsed: true, collapse: () => {}, extend: () => {}, setBaseAndExtent: () => {}, selectAllChildren: () => {}, removeRange: () => {}, containsNode: () => false, deleteFromDocument: () => {}, setPosition: () => {} };
+        }
+        return selection;
+    };
 
     // restoreProjects is defined outside IIFE but called from within, ensure it uses global functions correctly
     // It's better to move it inside IIFE or ensure all its dependencies are globally available when it runs.
@@ -2573,7 +2162,7 @@ window.removeProjectAllModeInterceptor = function() {
 
 })(); // End of IIFE
 
-// Page change listener - detects need for All button
+// Page change listener - detect All button needs
 (function() {
     let currentUrl = window.location.pathname;
     let currentProjectId = null;
@@ -2584,7 +2173,6 @@ window.removeProjectAllModeInterceptor = function() {
         if (newUrl !== currentUrl) {
             const previousUrl = currentUrl;
             currentUrl = newUrl;
-            console.log('[T3 Chat Script] 🔄 URL changed, checking All button requirement...');
 
             setTimeout(() => {
                 // Check current Project ID
@@ -2592,48 +2180,46 @@ window.removeProjectAllModeInterceptor = function() {
                 const wasInSameProject = currentProjectId === newProjectId && newProjectId !== null;
                 currentProjectId = newProjectId;
 
-                // Check All button state
+                // Check All button status
                 const allButton = document.querySelector('#all-mode-toggle');
                 const isAllModeActive = allButton && allButton.textContent === 'All' &&
                                        allButton.style.background && allButton.style.background.includes('pink');
 
-                // Update chat highlight state
+                // Update conversation highlight status
                 if (typeof manageChatHighlighting === 'function') {
                     manageChatHighlighting(newUrl);
                 }
 
                 if (wasInSameProject && isAllModeActive) {
-                    console.log('[T3 Chat Script] 🔄 Switched chat within the same Project, All mode enabled, re-fetching messages...');
 
                     // Re-fetch Project messages
                     if (typeof window.getAllProjectMessages === 'function') {
-                        const messagesData = window.getAllProjectMessages();
+                        window.getAllProjectMessages().then(messagesData => {
+                            if (messagesData.success) {
+                                // Update cached message data
+                                window.projectAllModeData = {
+                                    projectId: messagesData.projectId,
+                                    projectTitle: messagesData.projectTitle,
+                                    collectedAt: Date.now(),
+                                    totalChats: messagesData.totalChats,
+                                    uniqueChats: messagesData.uniqueChats,
+                                    availableChats: messagesData.availableChats,
+                                    chats: messagesData.chats,
+                                    totalMessages: messagesData.totalMessages,
+                                    contextPrompt: messagesData.contextPrompt,
+                                    cacheStats: messagesData.cacheStats
+                                };
 
-                        if (messagesData.success) {
-                            // Update temporarily stored message data
-                            window.projectAllModeData = {
-                                projectId: messagesData.projectId,
-                                projectTitle: messagesData.projectTitle,
-                                collectedAt: Date.now(),
-                                totalChats: messagesData.totalChats,
-                                uniqueChats: messagesData.uniqueChats,
-                                availableChats: messagesData.availableChats,
-                                chats: messagesData.chats,
-                                totalMessages: messagesData.totalMessages,
-                                contextPrompt: messagesData.contextPrompt,
-                                cacheStats: messagesData.cacheStats
-                            };
-
-                            console.log(`[T3 Chat Script] ✅ Updated Project "${messagesData.projectTitle}" message library: ${messagesData.totalMessages} messages from ${messagesData.uniqueChats} unique conversations`);
-                        } else {
-                            console.log('[T3 Chat Script] ⚠️ Re-fetch messages failed:', messagesData.message);
-                        }
+                            } else {
+                            }
+                        }).catch(error => {
+                            // Ignore errors
+                        });
                     }
                 } else {
                     // Check if All button needs to be created or removed
                     if (typeof window.createAllButton === 'function') {
                         const created = window.createAllButton();
-                        console.log('[T3 Chat Script] 🔘 All button check result:', created);
                     }
                 }
             }, 1000);
@@ -2649,112 +2235,127 @@ window.removeProjectAllModeInterceptor = function() {
 
     history.pushState = function() {
         originalPushState.apply(history, arguments);
-        setTimeout(checkAllButtonNeed, 100);
+        setTimeout(() => checkAllButtonNeed(), 100);
     };
 
     history.replaceState = function() {
         originalReplaceState.apply(history, arguments);
-        setTimeout(checkAllButtonNeed, 100);
+        setTimeout(() => checkAllButtonNeed(), 100);
     };
 
-    // Listen for custom navigation event
+    // Listen for custom navigation events
     window.addEventListener('t3chat-navigation', (e) => {
-        console.log('[T3 Chat Script] 🧭 T3Chat custom navigation:', e.detail);
-        setTimeout(checkAllButtonNeed, 500);
+        setTimeout(() => checkAllButtonNeed(), 500);
     });
 
     // Initialize current Project ID
     setTimeout(() => {
         currentProjectId = window.getCurrentProjectId ? window.getCurrentProjectId() : null;
 
-        // Initialize chat highlight state
+        // Initialize conversation highlight status
         if (typeof window.manageChatHighlighting === 'function') {
             const currentUrl = window.location.pathname;
             window.manageChatHighlighting(currentUrl);
         }
 
-        // Initialize All button state
+        // Initialize All button status
         if (typeof window.createAllButton === 'function') {
             const created = window.createAllButton();
-            console.log('[T3 Chat Script] 🔘 Initialize All button check result:', created);
         }
     }, 1000);
-
-    console.log('[T3 Chat Script] 🔄 Page change listener set up (supports Project message re-fetching)');
 })();
 
 // restoreProjects is defined in the global scope
 var restoreProjects = function() {
-    try {
-        console.log('[TM Script] 🔄 Attempting to restore saved projects');
-        const contentSidebar = document.querySelector('div[data-sidebar="content"]');
-        if (!contentSidebar) {
-            console.warn('[TM Script] Sidebar not found, cannot restore projects');
-                                    return false;
-                                }
+    const contentSidebar = document.querySelector('div[data-sidebar="content"]');
+    if (!contentSidebar) {
+                                return false;
+                            }
 
-        const projects = window.loadProjectsFromStorage ? window.loadProjectsFromStorage() : [];
-        if (!projects || projects.length === 0) {
-            console.log('[TM Script] No projects to restore');
-            return false;
-        }
-        console.log(`[TM Script] Restoring ${projects.length} projects from local storage`);
+    const projects = window.loadProjectsFromStorage ? window.loadProjectsFromStorage() : [];
+    if (!projects || projects.length === 0) {
+        return false;
+    }
 
-        let pinnedProjects = [];
-        let unpinnedProjects = [];
-        projects.forEach(projectData => {
-            // Check if a Project with the same ID already exists
-            const existingProject = document.querySelector(`a[data-project-id="${projectData.id}"]`);
-            if (existingProject) {
-                console.log(`[TM Script] Project ${projectData.id} already exists, skipping creation`);
-                return; // Skip already existing projects
-            }
-
-            if (projectData.isPinned) {
-                pinnedProjects.push(projectData);
-            } else {
-                unpinnedProjects.push(projectData);
-            }
-        });
-
-        // If all projects already exist, return success directly
-        if (pinnedProjects.length === 0 && unpinnedProjects.length === 0) {
-            console.log('[TM Script] All projects already exist, no need to restore');
-            return true;
+    let pinnedProjects = [];
+    let unpinnedProjects = [];
+    projects.forEach(projectData => {
+        // 檢查是否已經存在相同 ID 的 Project
+        const existingProject = document.querySelector(`a[data-project-id="${projectData.id}"]`);
+        if (existingProject) {
+            return; // 跳過已經存在的項目
         }
 
-        pinnedProjects.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-        unpinnedProjects.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+        if (projectData.isPinned) {
+            pinnedProjects.push(projectData);
+        } else {
+            unpinnedProjects.push(projectData);
+        }
+    });
 
-        if (pinnedProjects.length > 0) {
-            let projectPinSection = contentSidebar.querySelector('.project-pin-group');
-            if (!projectPinSection) {
-                projectPinSection = document.createElement('div');
-                projectPinSection.className = 'project-pin-group relative flex w-full min-w-0 flex-col p-2';
-                projectPinSection.setAttribute('data-sidebar', 'group');
-                const groupLabel = document.createElement('div');
-                groupLabel.setAttribute('data-sidebar', 'group-label');
-                groupLabel.className = 'flex h-8 shrink-0 select-none items-center rounded-md text-xs font-medium outline-none ring-sidebar-ring transition-[margin,opa] duration-200 ease-snappy focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0 group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 px-1.5 text-color-heading';
-                groupLabel.innerHTML = 'Project Pin';
-                const groupContent = document.createElement('div');
-                groupContent.setAttribute('data-sidebar', 'group-content');
-                groupContent.className = 'w-full text-sm';
-                const menuList = document.createElement('ul');
-                menuList.setAttribute('data-sidebar', 'menu');
-                menuList.className = 'flex w-full min-w-0 flex-col gap-1 project-pin-items';
-                groupContent.appendChild(menuList);
-                projectPinSection.appendChild(groupLabel);
-                projectPinSection.appendChild(groupContent);
-                contentSidebar.insertBefore(projectPinSection, contentSidebar.firstChild);
+    // If all projects already exist, return success directly
+    if (pinnedProjects.length === 0 && unpinnedProjects.length === 0) {
+        return true;
+    }
+
+    pinnedProjects.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    unpinnedProjects.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+
+    if (pinnedProjects.length > 0) {
+        let projectPinSection = contentSidebar.querySelector('.project-pin-group');
+        if (!projectPinSection) {
+            projectPinSection = document.createElement('div');
+            projectPinSection.className = 'project-pin-group relative flex w-full min-w-0 flex-col p-2';
+            projectPinSection.setAttribute('data-sidebar', 'group');
+            const groupLabel = document.createElement('div');
+            groupLabel.setAttribute('data-sidebar', 'group-label');
+            groupLabel.className = 'flex h-8 shrink-0 select-none items-center rounded-md text-xs font-medium outline-none ring-sidebar-ring transition-[margin,opa] duration-200 ease-snappy focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0 group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 px-1.5 text-color-heading';
+            groupLabel.innerHTML = 'Project Pin';
+            const groupContent = document.createElement('div');
+            groupContent.setAttribute('data-sidebar', 'group-content');
+            groupContent.className = 'w-full text-sm';
+            const menuList = document.createElement('ul');
+            menuList.setAttribute('data-sidebar', 'menu');
+            menuList.className = 'flex w-full min-w-0 flex-col gap-1 project-pin-items';
+            groupContent.appendChild(menuList);
+            projectPinSection.appendChild(groupLabel);
+            projectPinSection.appendChild(groupContent);
+            contentSidebar.insertBefore(projectPinSection, contentSidebar.firstChild);
+        }
+        const pinnedContainer = projectPinSection.querySelector('.project-pin-items');
+        if (pinnedContainer) {
+            pinnedProjects.forEach(projectData => {
+                const createItemFn = window.createProjectItem; // Use globally exposed function
+                const projectItem = createItemFn(projectData, contentSidebar);
+                if (projectItem) {
+                    pinnedContainer.insertBefore(projectItem, pinnedContainer.firstChild);
+                    if (projectData.chats && projectData.chats.length > 0) {
+                        const updateUIFn = window.updateProjectUI; // Use globally exposed function
+                        updateUIFn(projectData.id);
+                    }
+                }
+            });
+        }
+    }
+
+    if (unpinnedProjects.length > 0) {
+        let normalGroup = null;
+        const allGroups = contentSidebar.querySelectorAll('div[data-sidebar="group"]');
+        for (const group of allGroups) {
+            const groupLabel = group.querySelector('div[data-sidebar="group-label"]');
+            if (groupLabel && !groupLabel.textContent.includes('Project Pin') && !groupLabel.textContent.includes('Pinned') && !group.classList.contains('project-pin-group')) {
+                normalGroup = group;
+                break;
             }
-            const pinnedContainer = projectPinSection.querySelector('.project-pin-items');
-            if (pinnedContainer) {
-                pinnedProjects.forEach(projectData => {
+        }
+        if (normalGroup) {
+            const chatList = normalGroup.querySelector('ul[data-sidebar="menu"]');
+            if (chatList) {
+                unpinnedProjects.forEach(projectData => {
                     const createItemFn = window.createProjectItem; // Use globally exposed function
                     const projectItem = createItemFn(projectData, contentSidebar);
                     if (projectItem) {
-                        pinnedContainer.insertBefore(projectItem, pinnedContainer.firstChild);
-                        console.log(`[TM Script] Restored pinned project: ${projectData.title}`);
+                        chatList.insertBefore(projectItem, chatList.firstChild);
                         if (projectData.chats && projectData.chats.length > 0) {
                             const updateUIFn = window.updateProjectUI; // Use globally exposed function
                             updateUIFn(projectData.id);
@@ -2763,57 +2364,16 @@ var restoreProjects = function() {
                 });
             }
         }
-
-        if (unpinnedProjects.length > 0) {
-            let normalGroup = null;
-            const allGroups = contentSidebar.querySelectorAll('div[data-sidebar="group"]');
-            for (const group of allGroups) {
-                const groupLabel = group.querySelector('div[data-sidebar="group-label"]');
-                if (groupLabel && !groupLabel.textContent.includes('Project Pin') && !groupLabel.textContent.includes('Pinned') && !group.classList.contains('project-pin-group')) {
-                    normalGroup = group;
-                    break;
-                }
-            }
-            if (normalGroup) {
-                const chatList = normalGroup.querySelector('ul[data-sidebar="menu"]');
-                if (chatList) {
-                    unpinnedProjects.forEach(projectData => {
-                        const createItemFn = window.createProjectItem; // Use globally exposed function
-                        const projectItem = createItemFn(projectData, contentSidebar);
-                        if (projectItem) {
-                            chatList.insertBefore(projectItem, chatList.firstChild);
-                            console.log(`[TM Script] Restored normal project: ${projectData.title}`);
-                            if (projectData.chats && projectData.chats.length > 0) {
-                                const updateUIFn = window.updateProjectUI; // Use globally exposed function
-                                updateUIFn(projectData.id);
-                            }
-                        }
-                    });
-                }
-            }
-        }
-
-        console.log('[TM Script] ✅ Project restoration complete');
-        return true;
-    } catch (error) {
-        console.error(`[TM Script] Project restoration failed:`, error);
-        return false;
     }
+
+    return true;
 };
 
 function process() {
-    console.log('[T3 Chat Script] 🔧 Starting execution of process() function...');
-
-    // Detailed check of the sidebar
+    // Detailed sidebar check
     const sidebar = document.querySelector('div.px-1');
-    console.log('[T3 Chat Script] Sidebar check:', {
-        found: !!sidebar,
-        element: sidebar
-    });
 
     if (!sidebar) {
-        console.log('[T3 Chat Script] ❌ Sidebar not found (div.px-1)');
-
         // Try other possible selectors
         const alternateSidebars = [
             'div[class*="px-"]',
@@ -2825,7 +2385,6 @@ function process() {
         for (const selector of alternateSidebars) {
             const altSidebar = document.querySelector(selector);
             if (altSidebar) {
-                console.log(`[T3 Chat Script] Found alternative sidebar: ${selector}`, altSidebar);
                 break;
             }
         }
@@ -2834,20 +2393,16 @@ function process() {
     }
 
     // Set sidebar styles
-    console.log('[T3 Chat Script] Setting sidebar styles...');
     sidebar.style.setProperty('display', 'flex', 'important');
     sidebar.style.setProperty('align-items', 'center', 'important');
     sidebar.style.setProperty('gap', '4px', 'important');
 
-    // Detailed check of the original button
-    console.log('[T3 Chat Script] Finding original New Chat button...');
+    // Detailed check of original buttons
     const allButtons = sidebar.querySelectorAll('a[data-discover="true"]:not(.tm-clone)');
-    console.log('[T3 Chat Script] Buttons found:', allButtons.length);
 
     allButtons.forEach((btn, index) => {
         const href = btn.getAttribute('href');
         const text = btn.querySelector('span')?.textContent.trim() || btn.textContent.trim();
-        console.log(`[T3 Chat Script] Button ${index}: href="${href}", text="${text}"`);
     });
 
     const originalBtn = Array.from(allButtons).find(btn => {
@@ -2857,37 +2412,29 @@ function process() {
     });
 
     if (!originalBtn) {
-        console.log('[T3 Chat Script] ❌ Original New Chat button not found');
-        console.log('[T3 Chat Script] Attempting to use the first button as a template...');
-        // Fallback: Use the first available button
+        // Fallback: use first available button
         const firstButton = allButtons[0];
         if (firstButton) {
-            console.log('[T3 Chat Script] Using the first button as a template:', firstButton);
         } else {
-            console.log('[T3 Chat Script] ❌ No available buttons found');
             return false;
         }
     } else {
-        console.log('[T3 Chat Script] ✅ Original New Chat button found:', originalBtn);
     }
 
     // Check if Project button already exists
     const existingClone = sidebar.querySelector('.tm-clone');
     if (existingClone) {
-        console.log('[T3 Chat Script] ✅ Project button already exists, skipping creation');
         return true;
     }
 
-    // Use the found button (original button or first button)
+    // Use found button (original button or first button)
     const templateBtn = originalBtn || allButtons[0];
 
-    console.log('[T3 Chat Script] Setting template button styles...');
     templateBtn.style.setProperty('flex', '1 1 0%', 'important');
     templateBtn.style.setProperty('margin-right', '4px', 'important');
     templateBtn.style.setProperty('width', 'auto', 'important');
     templateBtn.style.setProperty('display', 'inline-flex', 'important');
 
-    console.log('[T3 Chat Script] Creating Project button...');
     const clone = templateBtn.cloneNode(true);
     clone.classList.add('tm-clone');
     clone.removeAttribute('href');
@@ -2898,174 +2445,303 @@ function process() {
     const span = clone.querySelector('span');
     if (span) {
         span.textContent = 'Project';
-        console.log('[T3 Chat Script] Setting button text to "Project"');
     } else {
-        console.log('[T3 Chat Script] ⚠️ Span element not found, attempting to set text directly');
         clone.textContent = 'Project';
     }
-
-    console.log('[T3 Chat Script] Adding Project button click event...');
     clone.addEventListener('click', e => {
-        try {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('[T3 Chat Script] 🏗️ Project button clicked');
+        e.preventDefault();
+        e.stopPropagation();
 
-            const contentSidebar = document.querySelector('div[data-sidebar="content"]');
-            if (!contentSidebar) {
-                console.log('[T3 Chat Script] ❌ Sidebar content area not found');
-                return;
+        const contentSidebar = document.querySelector('div[data-sidebar="content"]');
+        if (!contentSidebar) {
+            return;
+        }
+
+        const projectId = window.generateUniqueId();
+        const projectData = {
+            id: projectId,
+            title: 'Project',
+            isPinned: false,
+            createdAt: Date.now(),
+            chats: []
+        };
+
+        const projectItem = window.createProjectItem(projectData, contentSidebar);
+        if (projectItem) {
+            // Find appropriate position to insert project
+            const allGroups = contentSidebar.querySelectorAll('div[data-sidebar="group"]');
+            let targetGroup = null;
+
+            for (const group of allGroups) {
+                const groupLabel = group.querySelector('div[data-sidebar="group-label"]');
+                const isPinnedGroup = groupLabel && (
+                    groupLabel.textContent.includes('Pinned') ||
+                    groupLabel.querySelector('svg.lucide-pin') ||
+                    groupLabel.textContent.includes('Project Pin')
+                );
+                if (!isPinnedGroup && !group.classList.contains('project-pin-group')) {
+                    targetGroup = group;
+                    break;
+                }
             }
 
-            const projectId = window.generateUniqueId();
-            const projectData = {
-                id: projectId,
-                title: 'Project',
-                isPinned: false,
-                createdAt: Date.now(),
-                chats: []
-            };
-
-            console.log('[T3 Chat Script] Creating new Project:', projectData);
-
-            const projectItem = window.createProjectItem(projectData, contentSidebar);
-            if (projectItem) {
-                // Find an appropriate position to insert the item
-                const allGroups = contentSidebar.querySelectorAll('div[data-sidebar="group"]');
-                let targetGroup = null;
-
-                for (const group of allGroups) {
-                    const groupLabel = group.querySelector('div[data-sidebar="group-label"]');
-                    const isPinnedGroup = groupLabel && (
-                        groupLabel.textContent.includes('Pinned') ||
-                        groupLabel.querySelector('svg.lucide-pin') ||
-                        groupLabel.textContent.includes('Project Pin')
-                    );
-                    if (!isPinnedGroup && !group.classList.contains('project-pin-group')) {
-                        targetGroup = group;
-                        break;
-                    }
-                }
-
-                if (targetGroup) {
-                    const groupMenu = targetGroup.querySelector('div[data-sidebar="group-content"] ul[data-sidebar="menu"]');
-                    if (groupMenu) {
-                        groupMenu.prepend(projectItem);
-                    } else {
-                        targetGroup.prepend(projectItem);
-                    }
+            if (targetGroup) {
+                const groupMenu = targetGroup.querySelector('div[data-sidebar="group-content"] ul[data-sidebar="menu"]');
+                if (groupMenu) {
+                    groupMenu.prepend(projectItem);
                 } else {
-                    contentSidebar.prepend(projectItem);
+                    targetGroup.prepend(projectItem);
                 }
-
-                // Save to local storage
-                const projects = window.loadProjectsFromStorage();
-                projects.push(projectData);
-                window.saveProjectsToStorage(projects);
-
-                // Highlight new project
-                projectItem.style.transition = 'background-color 0.5s ease';
-                projectItem.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
-
-                // Ensure drag and drop functionality is set up immediately
-                if (window.makeProjectContainersDroppable) {
-                    setTimeout(() => {
-                        window.makeProjectContainersDroppable();
-
-                        // Automatically expand the newly created project container
-                        if (window.toggleProjectContent && projectId) {
-                            window.toggleProjectContent(projectId);
-                        }
-                        console.log(`[T3 Chat Script] Drag and drop functionality for new project set up, ID: ${projectId}`);
-                    }, 100);
-                }
-
-                setTimeout(() => { projectItem.style.backgroundColor = ''; }, 1000);
-                console.log('[T3 Chat Script] ✅ Project created successfully');
             } else {
-                console.log('[T3 Chat Script] ❌ createProjectItem returned null');
+                contentSidebar.prepend(projectItem);
             }
-        } catch (error) {
-            console.error('[T3 Chat Script] ❌ Error creating Project:', error);
+
+            // Save to local storage
+            const projects = window.loadProjectsFromStorage();
+            projects.push(projectData);
+            window.saveProjectsToStorage(projects);
+
+            // Highlight new project
+            projectItem.style.transition = 'background-color 0.5s ease';
+            projectItem.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+
+            // Ensure drag and drop functionality is set up immediately
+            if (window.makeProjectContainersDroppable) {
+                setTimeout(() => {
+                    window.makeProjectContainersDroppable();
+
+                    // Auto-expand newly created project container
+                    if (window.toggleProjectContent && projectId) {
+                        window.toggleProjectContent(projectId);
+                    }
+                }, 100);
+            }
+
+            setTimeout(() => { projectItem.style.backgroundColor = ''; }, 1000);
         }
     }, true);
 
     clone.style.setProperty('display', 'inline-flex', 'important');
 
-    console.log('[T3 Chat Script] Inserting Project button into DOM...');
     templateBtn.after(clone);
 
-    console.log('[T3 Chat Script] ✅ process() function executed successfully!');
     return true;
 }
 
 // Add functionality to capture Project conversation messages
-window.getAllProjectMessages = function() {
-    try {
-        console.log('🔍 [All Mode] Starting to get full Project message library...');
+window.getAllProjectMessages = async function() {
+    // Check if in Project conversation
+    const projectId = window.getCurrentProjectId();
+    if (!projectId) {
+        return { success: false, message: 'Currently not in Project conversation' };
+    }
 
-        // Check if in a Project chat
-        const projectId = window.getCurrentProjectId();
-        if (!projectId) {
-            console.log('🔍 [All Mode] Not in a Project chat');
-            return { success: false, message: 'Currently not in a Project chat' };
+    // Get Project data
+    const projects = window.loadProjectsFromStorage ? window.loadProjectsFromStorage() : [];
+    const currentProject = projects.find(p => p.id === projectId);
+
+    if (!currentProject || !currentProject.chats || currentProject.chats.length === 0) {
+        return { success: false, message: 'No conversations in Project' };
+    }
+
+    // Deduplication: use Set to avoid duplicate conversation URLs
+    const uniqueChats = [];
+    const seenUrls = new Set();
+
+    currentProject.chats.forEach(chat => {
+        if (!seenUrls.has(chat.url)) {
+            seenUrls.add(chat.url);
+            uniqueChats.push(chat);
+        }
+    });
+
+    // Load conversation pages in background to avoid affecting main window display
+    async function loadChatDoc(url) {
+      let iframe = document.getElementById('project-scraper-iframe');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'project-scraper-iframe';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+      }
+      return new Promise(resolve => {
+        iframe.onload = () => resolve(iframe.contentDocument);
+        iframe.src = url;
+      });
+    }
+
+    // Function to collect messages
+    const collectMessagesFromChat = async (chatUrl, chatTitle) => {
+        // Use main document or hidden iframe document to scrape content as needed
+        let messages = [];
+        const doc = (chatUrl === window.location.pathname)
+          ? document
+          : await loadChatDoc(chatUrl);
+
+        // Extract conversation messages (using doc, regardless of whether it's current page)
+        // Find multiple possible selectors for conversation message containers
+        const messageSelectors = [
+            '[data-testid*="message"]',
+            '[class*="message"]',
+            '[data-message-id]',
+            'div[role="group"] > div',
+            '.prose',
+            '[data-conversation-turn]'
+        ];
+
+        let messageElements = [];
+        for (const selector of messageSelectors) {
+            messageElements = doc.querySelectorAll(selector);
+            if (messageElements.length > 0) break;
         }
 
-        // Get Project data
-        const projects = window.loadProjectsFromStorage ? window.loadProjectsFromStorage() : [];
-        const currentProject = projects.find(p => p.id === projectId);
-
-        if (!currentProject || !currentProject.chats || currentProject.chats.length === 0) {
-            console.log('🔍 [All Mode] No conversations in Project');
-            return { success: false, message: 'No conversations in Project' };
+        // If not found, try more generic selectors
+        if (messageElements.length === 0) {
+            // Find containers that contain conversation content
+            const containers = doc.querySelectorAll('div, article, section');
+            for (const container of containers) {
+                const text = container.textContent.trim();
+                if (text.length > 50 &&
+                    (text.includes('User:') || text.includes('Assistant:') ||
+                     text.includes('user') || text.includes('assistant') ||
+                     container.querySelector('pre, code'))) {
+                    messageElements = [container];
+                    break;
+                }
+            }
         }
 
-        console.log(`🔍 [All Mode] Project "${currentProject.title}" contains ${currentProject.chats.length} conversations`);
+        // Process found message elements
+        messageElements.forEach((element, index) => {
+            const text = element.textContent.trim();
+            if (text && text.length > 10) {
+                // Determine if it's user or assistant message
+                const isUser = element.closest('[data-role="user"]') ||
+                              text.toLowerCase().includes('user:') ||
+                              element.className.includes('user') ||
+                              element.getAttribute('data-author') === 'user';
 
-        // Deduplication: Use Set to avoid duplicate conversation URLs
-        const uniqueChats = [];
-        const seenUrls = new Set();
+                const isAssistant = element.closest('[data-role="assistant"]') ||
+                                   text.toLowerCase().includes('assistant:') ||
+                                   element.className.includes('assistant') ||
+                                   element.getAttribute('data-author') === 'assistant';
 
-        currentProject.chats.forEach(chat => {
-            if (!seenUrls.has(chat.url)) {
-                seenUrls.add(chat.url);
-                uniqueChats.push(chat);
+                let role = 'unknown';
+                if (isUser) role = 'user';
+                else if (isAssistant) role = 'assistant';
+                else if (index % 2 === 0) role = 'user'; // Assume alternating pattern
+                else role = 'assistant';
+
+                messages.push({
+                    role: role,
+                    content: text,
+                    timestamp: Date.now(),
+                    index: index
+                });
             }
         });
 
-        const chatDetails = uniqueChats.map((chat, index) => ({
-            url: chat.url,
-            title: chat.title,
-            messageCount: 0,
-            lastUpdated: Date.now()
-        }));
+        // Immediately cache current conversation messages
+        if (messages.length > 0) {
+            const cachedKey = `chat_messages_${chatUrl.replace(/\//g, '_')}`;
+            localStorage.setItem(cachedKey, JSON.stringify(messages));
+        }
+        // If messages not yet collected, use fetch fallback
+        if (messages.length === 0) {
+            const response = await fetch(chatUrl, { method: 'GET', credentials: 'include' });
+            if (response.ok) {
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc2 = parser.parseFromString(html, 'text/html');
+                for (const selector of messageSelectors) {
+                    const elems = doc2.querySelectorAll(selector);
+                    elems.forEach((el, i) => {
+                        const txt = el.textContent.trim();
+                        if (txt && txt.length > 10) {
+                            const usr = el.closest('[data-role="user"]') || txt.toLowerCase().includes('user:');
+                            const ast = el.closest('[data-role="assistant"]') || txt.toLowerCase().includes('assistant:');
+                            const rl = usr ? 'user' : ast ? 'assistant' : (i % 2 === 0 ? 'user' : 'assistant');
+                            messages.push({ role: rl, content: txt, timestamp: Date.now(), index: i, source: 'fetched' });
+                        }
+                    });
+                    if (messages.length > 0) break;
+                }
+            }
+        }
+        // If still not collected, try local cache
+        if (messages.length === 0) {
+            const cacheKey = `chat_messages_${chatUrl.replace(/\//g, '_')}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                messages.push(...JSON.parse(cached));
+            }
+        }
+        // Return collection result for current chat
+        return { chatUrl, chatTitle, messages, messageCount: messages.length, lastCollected: Date.now() };
+    };
 
-        console.log(`🔍 [All Mode] After deduplication, ${chatDetails.length} unique conversations`);
+    // Collect messages from all conversations
+    const allMessages = [];
+    const chatDetails = [];
+    let totalMessages = 0;
 
-        // Generate concise context prompt
-        let contextPrompt = `=== Project "${currentProject.title}" Conversation List ===\n`;
-
-        chatDetails.forEach((chat, index) => {
-            contextPrompt += `${index + 1}. ${chat.title}\n`;
-        });
-
-        contextPrompt += `\nThe above are the ${chatDetails.length} conversations in Project "${currentProject.title}".\n`;
-
-        return {
-            success: true,
-            projectId: projectId,
-            projectTitle: currentProject.title,
-            totalChats: currentProject.chats.length,
-            uniqueChats: chatDetails.length,
-            availableChats: chatDetails.length, // Assuming all unique chats are available for this simplified version
-            chats: chatDetails,
-            totalMessages: chatDetails.length, // Simplified: one "message" per chat for context
-            contextPrompt: contextPrompt,
-            cacheStats: { total: chatDetails.length, collected: chatDetails.length, failed: 0 }
-        };
-
-    } catch (error) {
-        console.error('🔍 [All Mode] Error getting messages:', error);
-        return { success: false, message: 'Error getting messages: ' + error.message };
+    // Collect messages from all conversations sequentially to avoid parallel navigation conflicts
+    for (const chat of uniqueChats) {
+        try {
+            const chatData = await collectMessagesFromChat(chat.url, chat.title);
+            chatDetails.push(chatData);
+            allMessages.push(...chatData.messages);
+            totalMessages += chatData.messageCount;
+        } catch (e) {
+            // Ignore collection errors
+        }
     }
+
+    // Generate context prompt containing actual message content
+    let contextPrompt = `=== Project "${currentProject.title}" Complete Conversation Content ===\n\n`;
+
+    chatDetails.forEach((chatData, index) => {
+        contextPrompt += `【Conversation ${index + 1}: ${chatData.chatTitle}】\n`;
+        contextPrompt += `URL: ${chatData.chatUrl}\n`;
+        contextPrompt += `Message Count: ${chatData.messageCount}\n`;
+
+        if (chatData.messages.length > 0) {
+            contextPrompt += `Conversation Content:\n`;
+            chatData.messages.forEach((message, msgIndex) => {
+                const roleLabel = message.role === 'user' ? 'User' :
+                                 message.role === 'assistant' ? 'AI Assistant' : 'Unknown';
+                contextPrompt += `${roleLabel}: ${message.content}\n`;
+                if (msgIndex < chatData.messages.length - 1) {
+                    contextPrompt += `---\n`;
+                }
+            });
+        } else {
+            contextPrompt += `(Unable to collect message content, may need to visit this conversation first)\n`;
+        }
+
+        contextPrompt += `\n${'='.repeat(50)}\n\n`;
+    });
+
+    contextPrompt += `Project Summary:\n`;
+    contextPrompt += `- Total Conversations: ${chatDetails.length}\n`;
+    contextPrompt += `- Total Messages: ${totalMessages}\n`;
+    contextPrompt += `- Collection Time: ${new Date().toLocaleString()}\n\n`;
+
+    return {
+        success: true,
+        projectId: projectId,
+        projectTitle: currentProject.title,
+        totalChats: currentProject.chats.length,
+        uniqueChats: chatDetails.length,
+        availableChats: chatDetails.length,
+        chats: chatDetails,
+        allMessages: allMessages,
+        totalMessages: totalMessages,
+        contextPrompt: contextPrompt,
+        cacheStats: {
+            total: chatDetails.length,
+            collected: chatDetails.filter(c => c.messageCount > 0).length,
+            failed: chatDetails.filter(c => c.messageCount === 0).length
+        }
+    };
 };
