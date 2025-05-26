@@ -228,12 +228,12 @@ window.createAllButton = function() {
         // Function to update button style
         const updateButtonStyle = (active) => {
             if (active) {
-                // Active state - pink style
-                allButton.className = 'inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 disabled:cursor-not-allowed hover:text-foreground disabled:hover:bg-transparent disabled:hover:text-foreground/50 px-3 text-xs -mb-1.5 h-auto gap-2 rounded-full border border-solid border-secondary-foreground/10 py-1.5 pl-2 pr-2.5 text-muted-foreground hover:bg-pink-500/2 bg-pink-500/15';
+                // Active state - colored fill
+                allButton.className = 'inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 disabled:cursor-not-allowed font-semibold bg-[rgb(162,59,103)] dark:bg-primary/20 dark:hover:bg-pink-800/70 shadow border-reflect button-reflect hover:bg-[#d56698] active:bg-[rgb(162,59,103)] dark:active:bg-pink-800/40 disabled:hover:bg-[rgb(162,59,103)] disabled:active:bg-[rgb(162,59,103)] disabled:dark:hover:bg-primary/20 disabled:dark:active:bg-primary/20 h-9 w-9 relative rounded-lg p-2 text-pink-50';
                 allButton.innerHTML = 'All';
             } else {
-                // Inactive state - original style
-                allButton.className = 'inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 disabled:cursor-not-allowed hover:bg-muted/40 hover:text-foreground disabled:hover:bg-transparent disabled:hover:text-foreground/50 px-3 text-xs -mb-1.5 h-auto gap-2 rounded-full border border-solid border-secondary-foreground/10 py-1.5 pl-2 pr-2.5 text-muted-foreground';
+                // Inactive state - transparent background
+                allButton.className = 'inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 disabled:cursor-not-allowed font-semibold shadow border-reflect button-reflect bg-transparent h-9 w-9 relative rounded-lg p-2 text-pink-50';
                 allButton.innerHTML = 'All';
             }
         };
@@ -2500,10 +2500,6 @@ function process() {
             const projects = window.loadProjectsFromStorage();
             projects.push(projectData);
             window.saveProjectsToStorage(projects);
-
-            // Highlight new project
-            projectItem.style.transition = 'background-color 0.5s ease';
-            projectItem.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
 
             // Ensure drag and drop functionality is set up immediately
             if (window.makeProjectContainersDroppable) {
