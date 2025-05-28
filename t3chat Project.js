@@ -2519,7 +2519,7 @@ function process() {
 
     clone.style.setProperty('display', 'inline-flex', 'important');
 
-    templateBtn.after(clone);
+    templateBtn.before(clone);
 
     return true;
 }
