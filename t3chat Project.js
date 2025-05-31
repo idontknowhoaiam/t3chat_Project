@@ -6,6 +6,8 @@
 // @author       idontknowhoaiam
 // @match        https://t3.chat/*
 // @match        https://t3.chat/chat*
+// @match        https://beta.t3.chat/*
+// @match        https://beta.t3.chat/chat*
 // @grant        none
 // @run-at       document-idle
 // @noframes
@@ -929,7 +931,7 @@ window.removeProjectAllModeInterceptor = function() {
             const projectId = event.currentTarget.getAttribute('data-project-id');
             if (projectId) {
                 addChatToProject(dragData, projectId);
-                // 確保項目內容展開顯示
+
                 toggleProjectContent(projectId);
             }
         }
@@ -1196,9 +1198,6 @@ window.removeProjectAllModeInterceptor = function() {
     };
 
     const showSuccessToast = (message) => { };
-    const showErrorToast = (message) => { };
-    const showInfoToast = (message) => { };
-    const showToast = (message, type = 'info') => { };
 
     // Add function to manage chat highlighting status
     const manageChatHighlighting = (activeUrl) => {
@@ -1465,8 +1464,12 @@ window.removeProjectAllModeInterceptor = function() {
                 projects[projectIndex].chats = projects[projectIndex].chats.filter(chat => chat.url !== chatUrl);
                 saveProjectsToStorage(projects);
 
-                // Update the project content height after removal
-                const projectContent = document.querySelector(`div[data-project-content="${projectId}"]`);
+                if (typeof updateProjectUI === 'function') {
+                    updateProjectUI(projectId);
+                }
+
+
+                const projectContent = document.querySelector(`div[data-project-content=\"${projectId}\"]`);
 
                 if (projectContent) {
                     if (projects[projectIndex].chats.length === 0) {
@@ -1474,6 +1477,14 @@ window.removeProjectAllModeInterceptor = function() {
                     } else {
                         updateProjectContentHeight(projectContent, projects[projectIndex].chats.length);
                     }
+                }
+
+
+                if (false && projects[projectIndex].chats.length === 0) {
+                    const projectLink = document.querySelector(`a[data-project-id=\"${projectId}\"]`);
+                    if (projectLink) projectLink.remove();
+                    const projectContentEl = document.querySelector(`div[data-project-content=\"${projectId}\"]`);
+                    if (projectContentEl) projectContentEl.remove();
                 }
 
                 showSuccessToast('Chat removed from project');
@@ -1496,17 +1507,17 @@ window.removeProjectAllModeInterceptor = function() {
             threadLink.style.width = 'auto';
             threadLink.style.flex = '1 1 auto';
             threadLink.style.cursor = 'pointer';
-            threadLink.style.userSelect = 'none'; // 防止文本選擇
+            threadLink.style.userSelect = 'none'; 
             threadLink.addEventListener('click', (event) => {
-                // 檢查點擊是否來自三角形圖標
+
                 if (event.target.closest('.triangle-icon')) {
-                    return; // 如果點擊的是三角形圖標，不處理這個事件
+                    return; 
                 }
 
                 event.preventDefault();
                 event.stopPropagation();
 
-                // 防止快速點擊觸發重命名
+
                 const currentTime = Date.now();
                 if (!threadLink._lastClickTime) {
                     threadLink._lastClickTime = currentTime;
@@ -1514,7 +1525,6 @@ window.removeProjectAllModeInterceptor = function() {
                     const timeDiff = currentTime - threadLink._lastClickTime;
                     threadLink._lastClickTime = currentTime;
 
-                    // 如果點擊間隔太短，忽略這次點擊
                     if (timeDiff < 300) {
                         return;
                     }
@@ -1543,14 +1553,14 @@ window.removeProjectAllModeInterceptor = function() {
             `;
             triangleIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="8,4 16,12 8,20"></polygon></svg>';
 
-            // 為三角形圖標添加獨立的點擊事件
+
             triangleIcon.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
                 toggleProjectContent(projectData.id);
             });
 
-            // 為三角形圖標添加懸停效果
+
             triangleIcon.addEventListener('mouseenter', () => {
                 triangleIcon.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
             });
@@ -1672,13 +1682,12 @@ window.removeProjectAllModeInterceptor = function() {
                 saveProjectState();
             };
 
-            // 只在輸入框區域添加雙擊事件，並且增加防抖機制
+
             let doubleClickTimeout = null;
             input.addEventListener('dblclick', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
 
-                // 清除之前的延遲，確保不會重複觸發
                 if (doubleClickTimeout) {
                     clearTimeout(doubleClickTimeout);
                 }
@@ -1689,7 +1698,7 @@ window.removeProjectAllModeInterceptor = function() {
                 }, 50);
             });
 
-            // 移除原來在 threadLink 上的雙擊事件，避免衝突
+
             input.addEventListener('blur', finishRenaming);
 
             threadLink.addEventListener('dblclick', (event) => {
@@ -1920,7 +1929,7 @@ window.removeProjectAllModeInterceptor = function() {
             return threadLink;
     };
 
-    // Define toggleProjectContent once in the IIFE scope
+
     const toggleProjectContent = (projectId) => {
         const projectContainer = document.querySelector(`a[data-project-id="${projectId}"]`);
         if (!projectContainer) {
@@ -1929,13 +1938,12 @@ window.removeProjectAllModeInterceptor = function() {
 
         let projectContent = document.querySelector(`div[data-project-content="${projectId}"]`);
 
-        // 如果項目內容容器不存在，創建一個新的
         if (!projectContent) {
             projectContent = document.createElement('div');
             projectContent.setAttribute('data-project-content', projectId);
             projectContent.className = 'pl-4 mt-1 space-y-1 project-content';
 
-            // 確保插入到正確的位置
+
             if (projectContainer.nextSibling) {
                 projectContainer.parentNode.insertBefore(projectContent, projectContainer.nextSibling);
             } else {
@@ -1943,7 +1951,7 @@ window.removeProjectAllModeInterceptor = function() {
             }
         }
 
-        // 確保三角形圖標存在並更新
+
         let triangleIcon = projectContainer.querySelector('.triangle-icon');
         if (!triangleIcon) {
             const innerDiv = projectContainer.querySelector('.relative.flex.w-full.items-center');
@@ -1962,34 +1970,33 @@ window.removeProjectAllModeInterceptor = function() {
             }
         }
 
-        // 檢查當前展開狀態
+
         const isCurrentlyExpanded = projectContainer.getAttribute('data-expanded') === 'true';
 
         if (!isCurrentlyExpanded) {
-            // 展開項目內容
 
-            // 設置展開狀態
+
+
             projectContainer.setAttribute('data-expanded', 'true');
 
-            // 更新三角形圖標為展開狀態
+
             if (triangleIcon) {
                 triangleIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="4,8 20,8 12,16"></polygon></svg>';
             }
 
-            // 顯示項目內容
+
             projectContent.style.display = 'block';
 
-            // 強制更新項目UI
+
             updateProjectUI(projectId);
 
-            // 確保內容可見
+
             setTimeout(() => {
                 projectContent.style.opacity = '1';
                 projectContent.style.visibility = 'visible';
 
-                // 再次確保拖放功能正常
                 setTimeout(() => {
-                    // 清除當前項目的拖放標記，強制重新設置
+
                     const container = document.querySelector(`a[data-project-id="${projectId}"]`);
                     if (container) {
                         container._dragHandlersAttached = false;
@@ -1999,12 +2006,11 @@ window.removeProjectAllModeInterceptor = function() {
             }, 10);
 
         } else {
-            // 收起項目內容
+
 
             projectContainer.removeAttribute('data-expanded');
             projectContent.style.display = 'none';
 
-            // 更新三角形圖標為收起狀態
             if (triangleIcon) {
                 triangleIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="8,4 16,12 8,20"></polygon></svg>';
             }
@@ -2018,20 +2024,15 @@ window.removeProjectAllModeInterceptor = function() {
         window.saveProjectsToStorage = saveProjectsToStorage;
         window.makeProjectContainersDroppable = makeProjectContainersDroppable;
         window.updateProjectUI = updateProjectUI;
-        window.addChatToProject = addChatToProject; // 確保 addChatToProject 函數可全局訪問
+        window.addChatToProject = addChatToProject; 
         window.toggleProjectContent = toggleProjectContent;
-        window.manageChatHighlighting = manageChatHighlighting; // 添加高亮管理函數到全局
+        window.manageChatHighlighting = manageChatHighlighting;
+        // Expose removeChatFromProject for MutationObserver
+        window.removeChatFromProject = removeChatFromProject;
 
-        // All 按鈕相關函數已在全局範圍定義，這裡確認
+
     }
     setupGlobalFunctions();
-
-    const safeQuerySelector = (selector, parent = document) => {
-        if (!parent) return null;
-        return parent.querySelector(selector);
-    };
-
-
 
     const domObserver = new MutationObserver((mutations, obs) => {
         // Prevent duplicate execution check
@@ -2162,6 +2163,21 @@ window.removeProjectAllModeInterceptor = function() {
 
 })(); // End of IIFE
 
+setInterval(() => {
+    const sidebarLinks = Array.from(document.querySelectorAll('a[href*="/chat/"]:not([data-project-chat-id])'))
+        .map(a => a.getAttribute('href').startsWith('http') ? new URL(a.href).pathname : a.getAttribute('href'));
+    const currentSet = new Set(sidebarLinks);
+    const projects = window.loadProjectsFromStorage ? window.loadProjectsFromStorage() : [];
+    projects.forEach(proj => {
+        if (!proj.chats) return;
+        proj.chats.slice().forEach(chat => {
+            if (!currentSet.has(chat.url)) {
+                window.removeChatFromProject(chat.url, proj.id);
+            }
+        });
+    });
+}, 100);
+
 // Page change listener - detect All button needs
 (function() {
     let currentUrl = window.location.pathname;
@@ -2171,6 +2187,8 @@ window.removeProjectAllModeInterceptor = function() {
     const checkAllButtonNeed = () => {
         const newUrl = window.location.pathname;
         if (newUrl !== currentUrl) {
+            if (typeof process === 'function') process();
+            if (typeof restoreProjects === 'function') restoreProjects();
             const previousUrl = currentUrl;
             currentUrl = newUrl;
 
@@ -2186,8 +2204,8 @@ window.removeProjectAllModeInterceptor = function() {
                                        allButton.style.background && allButton.style.background.includes('pink');
 
                 // Update conversation highlight status
-                if (typeof manageChatHighlighting === 'function') {
-                    manageChatHighlighting(newUrl);
+                if (typeof window.manageChatHighlighting === 'function') {
+                    window.manageChatHighlighting(newUrl);
                 }
 
                 if (wasInSameProject && isAllModeActive) {
@@ -2526,6 +2544,10 @@ function process() {
 
 // Add functionality to capture Project conversation messages
 window.getAllProjectMessages = async function() {
+    // Beta version: use BetaGetAllProjectMessages when on beta.t3.chat
+    if (window.location.host.includes('beta.t3.chat')) {
+        return await BetaGetAllProjectMessages();
+    }
     // Check if in Project conversation
     const projectId = window.getCurrentProjectId();
     if (!projectId) {
@@ -2741,3 +2763,163 @@ window.getAllProjectMessages = async function() {
         }
     };
 };
+
+// Add beta version extraction function for beta.t3.chat
+async function BetaGetAllProjectMessages() {
+    const originalUrl = window.location.href;
+    const projectId = window.getCurrentProjectId();
+    if (!projectId) {
+        return { success: false, message: 'Currently not in Project conversation' };
+    }
+    const projects = window.loadProjectsFromStorage ? window.loadProjectsFromStorage() : [];
+    const currentProject = projects.find(p => p.id === projectId);
+    if (!currentProject || !currentProject.chats || currentProject.chats.length === 0) {
+        return { success: false, message: 'No conversations in Project' };
+    }
+    const uniqueChats = [];
+    const seenUrls = new Set();
+    currentProject.chats.forEach(chat => {
+        if (!seenUrls.has(chat.url)) {
+            seenUrls.add(chat.url);
+            uniqueChats.push(chat);
+        }
+    });
+    const config = { waitTime: 100, maxWaitCycles: 20, navigationDelay: 50 };
+    function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+    function navigateToUrl(url) {
+        if (window.history && window.history.pushState) {
+            window.history.pushState(null, '', url);
+            window.dispatchEvent(new PopStateEvent('popstate'));
+            if (window.React || window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
+                window.dispatchEvent(new Event('pushstate'));
+            }
+        } else {
+            window.location.href = url;
+        }
+    }
+    async function waitForChatContent() {
+        let cycles = 0;
+        while (cycles < config.maxWaitCycles) {
+            const chatContainer = document.querySelector('[role="log"][aria-label="Chat messages"]');
+            const messageElements = chatContainer?.querySelectorAll('[data-message-id]');
+            if (chatContainer && messageElements && messageElements.length > 0) {
+                await sleep(config.waitTime);
+                return;
+            }
+            await sleep(config.waitTime);
+            cycles++;
+        }
+        throw new Error('Waiting for chat content timed out');
+    }
+    function extractMessagesFromCurrentPage() {
+        const messages = [];
+        const chatContainer = document.querySelector('[role="log"][aria-label="Chat messages"]');
+        if (!chatContainer) return messages;
+        const messageElements = chatContainer.querySelectorAll('[data-message-id]');
+        messageElements.forEach((elem, idx) => {
+            let messageType = 'unknown';
+            if (elem.querySelector('.flex.justify-end')) {
+                messageType = 'user';
+            } else if (elem.querySelector('.flex.justify-start')) {
+                messageType = 'assistant';
+            }
+            const proseEl = elem.querySelector('.prose');
+            let content = '';
+            if (proseEl) {
+                const cloned = proseEl.cloneNode(true);
+                cloned.querySelectorAll('.sr-only').forEach(el => el.remove());
+                content = cloned.textContent.trim();
+            } else {
+                const cloned = elem.cloneNode(true);
+                cloned.querySelectorAll('button, .sr-only, svg, [aria-label*="Copy"], [aria-label*="Retry"], [aria-label*="Edit"], [aria-label*="Branch"]').forEach(el => el.remove());
+                content = cloned.textContent.trim();
+            }
+            if (content) {
+                content = content.replace(/Generated with GPT-[\\d\\.]+/g, '').replace(/\\s+/g, ' ').trim();
+                if (content) {
+                    messages.push({ role: messageType, content, timestamp: Date.now(), index: idx });
+                }
+            }
+        });
+        return messages;
+    }
+    const chatDetails = [];
+    const allMessages = [];
+    for (const chat of uniqueChats) {
+        try {
+            const url = window.location.origin + chat.url;
+            navigateToUrl(url);
+            await waitForChatContent();
+            const msgs = extractMessagesFromCurrentPage();
+            chatDetails.push({ chatUrl: url, chatTitle: chat.title, messages: msgs, messageCount: msgs.length, lastCollected: Date.now() });
+            allMessages.push(...msgs);
+        } catch (err) {
+            chatDetails.push({ chatUrl: chat.url, chatTitle: chat.title, messages: [], messageCount: 0, error: err.message, lastCollected: Date.now() });
+        }
+        await sleep(config.navigationDelay);
+    }
+    const totalChats = currentProject.chats.length;
+    const availableChats = chatDetails.length;
+    const totalMessages = allMessages.length;
+    let contextPrompt = `=== Project "${currentProject.title}" Complete Conversation Content ===\n\n`;
+    chatDetails.forEach((data, i) => {
+        contextPrompt += `【Conversation ${i+1}: ${data.chatTitle}】\n`;
+        contextPrompt += `URL: ${data.chatUrl}\n`;
+        contextPrompt += `Message Count: ${data.messageCount}\n`;
+        if (data.messages.length > 0) {
+            contextPrompt += `Conversation Content:\n`;
+            data.messages.forEach((m, mi) => {
+                const label = m.role === 'user' ? 'User' : 'AI Assistant';
+                contextPrompt += `${label}: ${m.content}\n`;
+                if (mi < data.messages.length -1) contextPrompt += `---\n`;
+            });
+        } else {
+            contextPrompt += `(Unable to collect message content, may need to visit this conversation first)\n`;
+        }
+        contextPrompt += `\n${'='.repeat(50)}\n\n`;
+    });
+    contextPrompt += `Project Summary:\n- Total Conversations: ${availableChats}\n- Total Messages: ${totalMessages}\n- Collection Time: ${new Date().toLocaleString()}\n\n`;
+    // Return to original conversation view
+    navigateToUrl(originalUrl);
+    if (typeof window.restoreProjects === 'function') {
+        window.restoreProjects();
+    }
+    if (typeof window.createAllButton === 'function') {
+        window.createAllButton();
+    }
+    return { success: true, projectId, projectTitle: currentProject.title, totalChats, uniqueChats: availableChats, availableChats, chats: chatDetails, allMessages, totalMessages, contextPrompt, cacheStats: { total: availableChats, collected: chatDetails.filter(c=>c.messageCount>0).length, failed: chatDetails.filter(c=>c.messageCount===0).length } };
+}
+
+
+(function() {
+    const sidebar = document.querySelector('div[data-sidebar="content"]');
+    if (!sidebar) return;
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach(m => {
+            m.removedNodes.forEach(node => {
+                if (node.nodeType !== 1) return;
+
+                const anchors = [];
+                if (node.matches && node.matches('a[href*="/chat/"]:not([data-project-chat-id])')) {
+                    anchors.push(node);
+                }
+                if (node.querySelectorAll) {
+                    node.querySelectorAll('a[href*="/chat/"]:not([data-project-chat-id])').forEach(a => anchors.push(a));
+                }
+                anchors.forEach(anchor => {
+
+                    const href = anchor.getAttribute('href');
+                    const url = href.startsWith('http') ? new URL(href).pathname : href;
+                    const projects = window.loadProjectsFromStorage ? window.loadProjectsFromStorage() : [];
+                    projects.forEach(proj => {
+                        if (proj.chats && proj.chats.some(c => c.url === url)) {
+                            window.removeChatFromProject(url, proj.id);
+                            if (typeof window.updateProjectUI === 'function') window.updateProjectUI(proj.id);
+                        }
+                    });
+                });
+            });
+        });
+    });
+    observer.observe(sidebar, { childList: true, subtree: true });
+})();
