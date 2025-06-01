@@ -1507,11 +1507,11 @@ window.removeProjectAllModeInterceptor = function() {
             threadLink.style.width = 'auto';
             threadLink.style.flex = '1 1 auto';
             threadLink.style.cursor = 'pointer';
-            threadLink.style.userSelect = 'none'; 
+            threadLink.style.userSelect = 'none';
             threadLink.addEventListener('click', (event) => {
 
                 if (event.target.closest('.triangle-icon')) {
-                    return; 
+                    return;
                 }
 
                 event.preventDefault();
@@ -2024,7 +2024,7 @@ window.removeProjectAllModeInterceptor = function() {
         window.saveProjectsToStorage = saveProjectsToStorage;
         window.makeProjectContainersDroppable = makeProjectContainersDroppable;
         window.updateProjectUI = updateProjectUI;
-        window.addChatToProject = addChatToProject; 
+        window.addChatToProject = addChatToProject;
         window.toggleProjectContent = toggleProjectContent;
         window.manageChatHighlighting = manageChatHighlighting;
         // Expose removeChatFromProject for MutationObserver
@@ -2544,224 +2544,8 @@ function process() {
 
 // Add functionality to capture Project conversation messages
 window.getAllProjectMessages = async function() {
-    // Beta version: use BetaGetAllProjectMessages when on beta.t3.chat
-    if (window.location.host.includes('beta.t3.chat')) {
-        return await BetaGetAllProjectMessages();
-    }
-    // Check if in Project conversation
-    const projectId = window.getCurrentProjectId();
-    if (!projectId) {
-        return { success: false, message: 'Currently not in Project conversation' };
-    }
-
-    // Get Project data
-    const projects = window.loadProjectsFromStorage ? window.loadProjectsFromStorage() : [];
-    const currentProject = projects.find(p => p.id === projectId);
-
-    if (!currentProject || !currentProject.chats || currentProject.chats.length === 0) {
-        return { success: false, message: 'No conversations in Project' };
-    }
-
-    // Deduplication: use Set to avoid duplicate conversation URLs
-    const uniqueChats = [];
-    const seenUrls = new Set();
-
-    currentProject.chats.forEach(chat => {
-        if (!seenUrls.has(chat.url)) {
-            seenUrls.add(chat.url);
-            uniqueChats.push(chat);
-        }
-    });
-
-    // Load conversation pages in background to avoid affecting main window display
-    async function loadChatDoc(url) {
-      let iframe = document.getElementById('project-scraper-iframe');
-      if (!iframe) {
-        iframe = document.createElement('iframe');
-        iframe.id = 'project-scraper-iframe';
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-      }
-      return new Promise(resolve => {
-        iframe.onload = () => resolve(iframe.contentDocument);
-        iframe.src = url;
-      });
-    }
-
-    // Function to collect messages
-    const collectMessagesFromChat = async (chatUrl, chatTitle) => {
-        // Use main document or hidden iframe document to scrape content as needed
-        let messages = [];
-        const doc = (chatUrl === window.location.pathname)
-          ? document
-          : await loadChatDoc(chatUrl);
-
-        // Extract conversation messages (using doc, regardless of whether it's current page)
-        // Find multiple possible selectors for conversation message containers
-        const messageSelectors = [
-            '[data-testid*="message"]',
-            '[class*="message"]',
-            '[data-message-id]',
-            'div[role="group"] > div',
-            '.prose',
-            '[data-conversation-turn]'
-        ];
-
-        let messageElements = [];
-        for (const selector of messageSelectors) {
-            messageElements = doc.querySelectorAll(selector);
-            if (messageElements.length > 0) break;
-        }
-
-        // If not found, try more generic selectors
-        if (messageElements.length === 0) {
-            // Find containers that contain conversation content
-            const containers = doc.querySelectorAll('div, article, section');
-            for (const container of containers) {
-                const text = container.textContent.trim();
-                if (text.length > 50 &&
-                    (text.includes('User:') || text.includes('Assistant:') ||
-                     text.includes('user') || text.includes('assistant') ||
-                     container.querySelector('pre, code'))) {
-                    messageElements = [container];
-                    break;
-                }
-            }
-        }
-
-        // Process found message elements
-        messageElements.forEach((element, index) => {
-            const text = element.textContent.trim();
-            if (text && text.length > 10) {
-                // Determine if it's user or assistant message
-                const isUser = element.closest('[data-role="user"]') ||
-                              text.toLowerCase().includes('user:') ||
-                              element.className.includes('user') ||
-                              element.getAttribute('data-author') === 'user';
-
-                const isAssistant = element.closest('[data-role="assistant"]') ||
-                                   text.toLowerCase().includes('assistant:') ||
-                                   element.className.includes('assistant') ||
-                                   element.getAttribute('data-author') === 'assistant';
-
-                let role = 'unknown';
-                if (isUser) role = 'user';
-                else if (isAssistant) role = 'assistant';
-                else if (index % 2 === 0) role = 'user'; // Assume alternating pattern
-                else role = 'assistant';
-
-                messages.push({
-                    role: role,
-                    content: text,
-                    timestamp: Date.now(),
-                    index: index
-                });
-            }
-        });
-
-        // Immediately cache current conversation messages
-        if (messages.length > 0) {
-            const cachedKey = `chat_messages_${chatUrl.replace(/\//g, '_')}`;
-            localStorage.setItem(cachedKey, JSON.stringify(messages));
-        }
-        // If messages not yet collected, use fetch fallback
-        if (messages.length === 0) {
-            const response = await fetch(chatUrl, { method: 'GET', credentials: 'include' });
-            if (response.ok) {
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc2 = parser.parseFromString(html, 'text/html');
-                for (const selector of messageSelectors) {
-                    const elems = doc2.querySelectorAll(selector);
-                    elems.forEach((el, i) => {
-                        const txt = el.textContent.trim();
-                        if (txt && txt.length > 10) {
-                            const usr = el.closest('[data-role="user"]') || txt.toLowerCase().includes('user:');
-                            const ast = el.closest('[data-role="assistant"]') || txt.toLowerCase().includes('assistant:');
-                            const rl = usr ? 'user' : ast ? 'assistant' : (i % 2 === 0 ? 'user' : 'assistant');
-                            messages.push({ role: rl, content: txt, timestamp: Date.now(), index: i, source: 'fetched' });
-                        }
-                    });
-                    if (messages.length > 0) break;
-                }
-            }
-        }
-        // If still not collected, try local cache
-        if (messages.length === 0) {
-            const cacheKey = `chat_messages_${chatUrl.replace(/\//g, '_')}`;
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                messages.push(...JSON.parse(cached));
-            }
-        }
-        // Return collection result for current chat
-        return { chatUrl, chatTitle, messages, messageCount: messages.length, lastCollected: Date.now() };
-    };
-
-    // Collect messages from all conversations
-    const allMessages = [];
-    const chatDetails = [];
-    let totalMessages = 0;
-
-    // Collect messages from all conversations sequentially to avoid parallel navigation conflicts
-    for (const chat of uniqueChats) {
-        try {
-            const chatData = await collectMessagesFromChat(chat.url, chat.title);
-            chatDetails.push(chatData);
-            allMessages.push(...chatData.messages);
-            totalMessages += chatData.messageCount;
-        } catch (e) {
-            // Ignore collection errors
-        }
-    }
-
-    // Generate context prompt containing actual message content
-    let contextPrompt = `=== Project "${currentProject.title}" Complete Conversation Content ===\n\n`;
-
-    chatDetails.forEach((chatData, index) => {
-        contextPrompt += `【Conversation ${index + 1}: ${chatData.chatTitle}】\n`;
-        contextPrompt += `URL: ${chatData.chatUrl}\n`;
-        contextPrompt += `Message Count: ${chatData.messageCount}\n`;
-
-        if (chatData.messages.length > 0) {
-            contextPrompt += `Conversation Content:\n`;
-            chatData.messages.forEach((message, msgIndex) => {
-                const roleLabel = message.role === 'user' ? 'User' :
-                                 message.role === 'assistant' ? 'AI Assistant' : 'Unknown';
-                contextPrompt += `${roleLabel}: ${message.content}\n`;
-                if (msgIndex < chatData.messages.length - 1) {
-                    contextPrompt += `---\n`;
-                }
-            });
-        } else {
-            contextPrompt += `(Unable to collect message content, may need to visit this conversation first)\n`;
-        }
-
-        contextPrompt += `\n${'='.repeat(50)}\n\n`;
-    });
-
-    contextPrompt += `Project Summary:\n`;
-    contextPrompt += `- Total Conversations: ${chatDetails.length}\n`;
-    contextPrompt += `- Total Messages: ${totalMessages}\n`;
-    contextPrompt += `- Collection Time: ${new Date().toLocaleString()}\n\n`;
-
-    return {
-        success: true,
-        projectId: projectId,
-        projectTitle: currentProject.title,
-        totalChats: currentProject.chats.length,
-        uniqueChats: chatDetails.length,
-        availableChats: chatDetails.length,
-        chats: chatDetails,
-        allMessages: allMessages,
-        totalMessages: totalMessages,
-        contextPrompt: contextPrompt,
-        cacheStats: {
-            total: chatDetails.length,
-            collected: chatDetails.filter(c => c.messageCount > 0).length,
-            failed: chatDetails.filter(c => c.messageCount === 0).length
-        }
-    };
+    // Use beta version for all cases
+    return await BetaGetAllProjectMessages();
 };
 
 // Add beta version extraction function for beta.t3.chat
