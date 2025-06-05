@@ -1,13 +1,11 @@
 // ==UserScript==
 // @name         T3 Chat Project
 // @namespace    http://tampermonkey.net/
-// @version      0.4
+// @version      0.5
 // @description  Add project to t3.chat
 // @author       idontknowhoaiam
 // @match        https://t3.chat/*
 // @match        https://t3.chat/chat*
-// @match        https://beta.t3.chat/*
-// @match        https://beta.t3.chat/chat*
 // @grant        none
 // @run-at       document-idle
 // @noframes
@@ -647,12 +645,7 @@ window.removeProjectAllModeInterceptor = function() {
 
     // Setup global drag effects, highlight all Project containers during drag
     const setupGlobalDragEffects = () => {
-        // Remove Gaussian blur functionality, keep only container highlighting
-
-        // Listen to global drag events
-        document.addEventListener('dragstart', handleGlobalDragStart, true);
-        document.addEventListener('dragend', handleGlobalDragEnd, true);
-        document.addEventListener('drop', handleGlobalDragEnd, true);
+        // Global drag highlight disabled
     };
 
     // Handle global drag start event
@@ -779,6 +772,7 @@ window.removeProjectAllModeInterceptor = function() {
     };
 
     const handleDragStart = (event) => {
+        const target = event.currentTarget;
         event.currentTarget.setAttribute('data-drag-started', 'true');
         const chatUrl = event.currentTarget.getAttribute('href');
         const chatTitle = event.currentTarget.querySelector('input')?.value || 'Chat';
@@ -828,8 +822,10 @@ window.removeProjectAllModeInterceptor = function() {
             if (document.body.contains(dragImage)) {
                 document.body.removeChild(dragImage);
             }
-            event.currentTarget.removeAttribute('data-drag-started');
-            event.currentTarget.removeAttribute('data-manual-drag');
+            if (target && typeof target.removeAttribute === 'function') {
+                target.removeAttribute('data-drag-started');
+                target.removeAttribute('data-manual-drag');
+            }
         }, 300);
     };
 
@@ -989,18 +985,7 @@ window.removeProjectAllModeInterceptor = function() {
                     e.preventDefault();
                     e.stopPropagation();
                     e.dataTransfer.dropEffect = 'copy';
-
-                    container.classList.add('drag-over');
-                    container.style.background = 'rgba(59, 130, 246, 0.2)';
-                    container.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.6)';
-                    container.style.transform = 'scale(1.02)';
-                    container.style.transition = 'all 0.15s ease-in-out';
-
-                    const folderIcon = container.querySelector('svg.lucide-folder');
-                    if (folderIcon) {
-                        folderIcon.style.color = '#3b82f6';
-                        folderIcon.style.transform = 'scale(1.1)';
-                    }
+                    // Removed project-container highlight styling
                 };
 
                 const dragEnterHandler = (e) => {
@@ -1669,15 +1654,12 @@ window.removeProjectAllModeInterceptor = function() {
             const enableRenaming = () => {
                 input.readOnly = false;
                 input.classList.remove('pointer-events-none');
-                input.classList.add('border', 'border-primary'); // Ensure primary is a defined color or use a standard one
                 input.focus();
                 input.select();
             };
 
             const finishRenaming = () => {
                 input.readOnly = true;
-                input.classList.add('pointer-events-none');
-                input.classList.remove('border', 'border-primary');
                 input.blur();
                 saveProjectState();
             };
@@ -2040,9 +2022,8 @@ window.removeProjectAllModeInterceptor = function() {
             return;
         }
         const sidebarReady = document.querySelector('div[data-sidebar="content"]');
-        const newChatButton = document.querySelector('div.px-1');
-
-        if (sidebarReady && newChatButton) {
+        // Always initialize when sidebar is ready
+        if (sidebarReady) {
 
             // Set initializing flag
             window.T3_CHAT_INITIALIZING = true;
@@ -2059,7 +2040,7 @@ window.removeProjectAllModeInterceptor = function() {
 
                 if (processed) {
                     setTimeout(() => {
-                        const restored = restoreProjects();
+                        const restored = (typeof window.restoreProjects === 'function' ? window.restoreProjects() : false);
 
                         // Initialize drag and drop functionality
                         setupDragAndDrop();
@@ -2093,6 +2074,8 @@ window.removeProjectAllModeInterceptor = function() {
         attributes: true,
         attributeFilter: ['class', 'data-sidebar']
     });
+    // Immediately restore projects on load
+    if (typeof window.restoreProjects === 'function') window.restoreProjects();
 
     // Immediately check if initialization is already possible
     setTimeout(() => {
@@ -2101,25 +2084,30 @@ window.removeProjectAllModeInterceptor = function() {
             return;
         }
         const sidebarReady = document.querySelector('div[data-sidebar="content"]');
-        const newChatButton = document.querySelector('div.px-1');
-
-        if (sidebarReady && newChatButton) {
+        // Always initialize when sidebar is ready
+        if (sidebarReady) {
 
             // Set initializing flag
             window.T3_CHAT_INITIALIZING = true;
 
-            // If already ready for initialization, execute immediately
-            if (typeof process === 'function') {
+            // Immediately try to execute process()
+            setTimeout(() => {
+                // Ensure process function exists
+                if (typeof process !== 'function') {
+                    window.T3_CHAT_INITIALIZING = false;
+                    return;
+                }
+
                 const processed = process();
 
                 if (processed) {
-                    domObserver.disconnect();
-
                     setTimeout(() => {
-                        const restored = restoreProjects();
+                        const restored = (typeof window.restoreProjects === 'function' ? window.restoreProjects() : false);
+
+                        // Initialize drag and drop functionality
                         setupDragAndDrop();
 
-                        // Immediately check All button
+                        // Check if All button needs to be created
                         setTimeout(() => {
                             if (typeof window.createAllButton === 'function') {
                                 const allButtonCreated = window.createAllButton();
@@ -2129,16 +2117,17 @@ window.removeProjectAllModeInterceptor = function() {
                             window.T3_CHAT_INITIALIZED = true;
                             window.T3_CHAT_INITIALIZING = false;
                         }, 1000);
-                    }, 300);
+                    }, 500);
                 } else {
                     window.T3_CHAT_INITIALIZING = false;
                 }
-            } else {
-                window.T3_CHAT_INITIALIZING = false;
-            }
+
+                // Disconnect observer after successful initialization
+                obs.disconnect();
+            }, 300);
         } else {
         }
-    }, 500);
+    });
 
     window.addEventListener('selectionchange', (event) => {
         const selection = window.getSelection();
@@ -2357,31 +2346,29 @@ var restoreProjects = function() {
     }
 
     if (unpinnedProjects.length > 0) {
-        let normalGroup = null;
+        // Attempt to restore under existing sidebar group, fallback to appending directly
+        let chatList = null;
         const allGroups = contentSidebar.querySelectorAll('div[data-sidebar="group"]');
         for (const group of allGroups) {
             const groupLabel = group.querySelector('div[data-sidebar="group-label"]');
             if (groupLabel && !groupLabel.textContent.includes('Project Pin') && !groupLabel.textContent.includes('Pinned') && !group.classList.contains('project-pin-group')) {
-                normalGroup = group;
+                chatList = group.querySelector('ul[data-sidebar="menu"]');
                 break;
             }
         }
-        if (normalGroup) {
-            const chatList = normalGroup.querySelector('ul[data-sidebar="menu"]');
-            if (chatList) {
-                unpinnedProjects.forEach(projectData => {
-                    const createItemFn = window.createProjectItem; // Use globally exposed function
-                    const projectItem = createItemFn(projectData, contentSidebar);
-                    if (projectItem) {
-                        chatList.insertBefore(projectItem, chatList.firstChild);
-                        if (projectData.chats && projectData.chats.length > 0) {
-                            const updateUIFn = window.updateProjectUI; // Use globally exposed function
-                            updateUIFn(projectData.id);
-                        }
-                    }
-                });
+        unpinnedProjects.forEach(projectData => {
+            const projectItem = window.createProjectItem(projectData, contentSidebar);
+            if (projectItem) {
+                if (chatList) {
+                    chatList.insertBefore(projectItem, chatList.firstChild);
+                } else {
+                    contentSidebar.appendChild(projectItem);
+                }
+                if (projectData.chats && projectData.chats.length > 0) {
+                    window.updateProjectUI(projectData.id);
+                }
             }
-        }
+        });
     }
 
     return true;
@@ -2568,7 +2555,7 @@ async function BetaGetAllProjectMessages() {
             uniqueChats.push(chat);
         }
     });
-    const config = { waitTime: 100, maxWaitCycles: 20, navigationDelay: 50 };
+    const config = { waitTime: 100, maxWaitCycles: 100, navigationDelay: 200 };
     function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
     function navigateToUrl(url) {
         if (window.history && window.history.pushState) {
@@ -2633,6 +2620,7 @@ async function BetaGetAllProjectMessages() {
         try {
             const url = window.location.origin + chat.url;
             navigateToUrl(url);
+            await sleep(config.navigationDelay);
             await waitForChatContent();
             const msgs = extractMessagesFromCurrentPage();
             chatDetails.push({ chatUrl: url, chatTitle: chat.title, messages: msgs, messageCount: msgs.length, lastCollected: Date.now() });
